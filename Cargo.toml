@@ -1,0 +1,38 @@
+[package]
+authors = ["Jorge Aparicio <jorge@japaric.io>"]
+name = "f3"
+version = "0.1.0"
+
+[dependencies]
+untagged-option = "0.1.1"
+
+[dependencies.cast]
+default-features = false
+version = "0.2.2"
+
+[dependencies.embedded-hal]
+git = "https://github.com/japaric/embedded-hal"
+
+[dependencies.nb]
+git = "https://github.com/japaric/nb"
+
+[dependencies.stm32f30x]
+branch = "singletons"
+features = ["rt"]
+git = "https://github.com/japaric/stm32f30x"
+
+[dev-dependencies.cortex-m]
+git = "https://github.com/japaric/cortex-m"
+branch = "singletons"
+
+[dev-dependencies.cortex-m-rt]
+features = ["abort-on-panic"]
+version = "0.3.5"
+
+[dev-dependencies.cortex-m-rtfm]
+git = "https://github.com/japaric/cortex-m-rtfm"
+branch = "singletons"
+
+[profile.release]
+debug = true
+lto = true
