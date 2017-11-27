@@ -2,11 +2,11 @@
 //!
 //! You can use the `Serial` interface with these USART instances
 //!
-//! # USART1
+//! # USART2
 //!
-//! - TX = PA9
-//! - RX = PA10
-//! - Interrupt = USART1
+//! - TX = PA2
+//! - RX = PA3
+//! - Interrupt = USART2
 
 use core::any::{Any, TypeId};
 use core::marker::Unsize;
@@ -17,23 +17,23 @@ use cast::u16;
 use hal;
 use nb;
 use static_ref::Static;
-use stm32f30x::{gpioa, DMA1, USART1, usart1, GPIOA,
+use stm32f40x::{gpioa, DMA1, USART2, usart6, GPIOA,
                   RCC};
 
-use dma::{self, Buffer, Dma1Channel4, Dma1Channel5};
+use dma::{self, Buffer, Dma1Channel6, Dma1Channel5};
 
 /// Specialized `Result` type
 pub type Result<T> = ::core::result::Result<T, nb::Error<Error>>;
 
 /// IMPLEMENTATION DETAIL
-pub unsafe trait Usart: Deref<Target = usart1::RegisterBlock> {
+pub unsafe trait Usart: Deref<Target = usart6::RegisterBlock> {
     /// IMPLEMENTATION DETAIL
     type GPIO: Deref<Target = gpioa::RegisterBlock>;
     /// IMPLEMENTATION DETAIL
     type Ticks: Into<u32>;
 }
 
-unsafe impl Usart for USART1 {
+unsafe impl Usart for USART2 {
     type GPIO = GPIOA;
     type Ticks = ::apb2::Ticks;
 }
@@ -117,31 +117,29 @@ where
 
         // power up peripherals
         if dma1.is_some() {
-            rcc.ahbenr.modify(|_, w| w.dmaen().enabled());
+            rcc.ahb1enr.modify(|_, w| w.dma1en().set_bit());
         }
-        if usart.get_type_id() == TypeId::of::<USART1>() {
-            rcc.apb2enr.modify(|_, w| {
-                w.usart1en().enabled()
+        if usart.get_type_id() == TypeId::of::<USART2>() {
+            rcc.apb1enr.modify(|_, w| {
+                w.usart2en().set_bit()
             });
         }
 
-        rcc.ahbenr.modify(|_, w| w.iopaen().set_bit());
+        rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
 
-        if usart.get_type_id() == TypeId::of::<USART1>() {
-            // PA9. = TX, PA10 = RX
-            gpio.afrh.modify(|_, w| {
-                unsafe {
-                    w.afrh9().bits(7).afrh10().bits(7)
-                }
+        if usart.get_type_id() == TypeId::of::<USART2>() {
+            // PA2. = TX, PA3 = RX
+            gpio.afrl.modify(|_, w| {
+                    w.afrl2().bits(7).afrl3().bits(7)
             });
             gpio.moder.modify(|_, w| {
-                w.moder9().alternate()
-                    .moder10().alternate()
+                w.moder2().bits(2)
+                    .moder3().bits(2)
             });
         }
 
         if let Some(dma1) = dma1 {
-            if usart.get_type_id() == TypeId::of::<USART1>() {
+            if usart.get_type_id() == TypeId::of::<USART2>() {
                 // TX DMA transfer
                 // mem2mem: Memory to memory mode disabled
                 // pl: Medium priority
@@ -153,10 +151,8 @@ where
                 // dir: Transfer from memory to peripheral
                 // tceie: Transfer complete interrupt enabled
                 // en: Disabled
-                dma1.ccr4.write(|w| unsafe {
-                    w.mem2mem()
-                        .clear_bit()
-                        .pl()
+                dma1.s6cr.write(|w| unsafe {
+                    w.pl()
                         .bits(0b01)
                         .msize()
                         .bits(0b00)
@@ -169,7 +165,7 @@ where
                         .pinc()
                         .clear_bit()
                         .dir()
-                        .set_bit()
+                        .bits(1)
                         .tcie()
                         .set_bit()
                         .en()
@@ -187,10 +183,8 @@ where
                 // dir: Transfer from peripheral to memory
                 // tceie: Transfer complete interrupt enabled
                 // en: Disabled
-                dma1.ccr5.write(|w| unsafe {
-                    w.mem2mem()
-                        .clear_bit()
-                        .pl()
+                dma1.s5cr.write(|w| unsafe {
+                    w.pl()
                         .bits(0b01)
                         .msize()
                         .bits(0b00)
@@ -203,7 +197,7 @@ where
                         .pinc()
                         .clear_bit()
                         .dir()
-                        .clear_bit()
+                        .bits(0)
                         .tcie()
                         .set_bit()
                         .en()
@@ -282,8 +276,8 @@ where
     type Error = Error;
 
     fn read(&self) -> Result<u8> {
-        let usart1 = self.0;
-        let sr = usart1.isr.read();
+        let usart2 = self.0;
+        let sr = usart2.sr.read();
 
         if sr.ore().bit_is_set() {
             Err(nb::Error::Other(Error::Overrun))
@@ -295,7 +289,7 @@ where
             // NOTE(read_volatile) the register is 9 bits big but we'll only
             // work with the first 8 bits
             Ok(unsafe {
-                ptr::read_volatile(&usart1.rdr as *const _ as *const u8)
+                ptr::read_volatile(&usart2.dr as *const _ as *const u8)
             })
         } else {
             Err(nb::Error::WouldBlock)
@@ -310,8 +304,8 @@ where
     type Error = Error;
 
     fn write(&self, byte: u8) -> Result<()> {
-        let usart1 = self.0;
-        let sr = usart1.isr.read();
+        let usart2 = self.0;
+        let sr = usart2.sr.read();
 
         if sr.ore().bit_is_set() {
             Err(nb::Error::Other(Error::Overrun))
@@ -322,7 +316,7 @@ where
         } else if sr.txe().bit_is_set() {
             // NOTE(write_volatile) see NOTE in the `read` method
             unsafe {
-                ptr::write_volatile(&usart1.tdr as *const _ as *mut u8, byte)
+                ptr::write_volatile(&usart2.dr as *const _ as *mut u8, byte)
             }
             Ok(())
         } else {
@@ -331,7 +325,7 @@ where
     }
 }
 
-impl<'a> Serial<'a, USART1> {
+impl<'a> Serial<'a, USART2> {
     /// Starts a DMA transfer to receive serial data into a `buffer`
     ///
     /// This will mutably lock the `buffer` preventing borrowing its contents
@@ -346,21 +340,21 @@ impl<'a> Serial<'a, USART1> {
     where
         B: Unsize<[u8]>,
     {
-        let usart1 = self.0;
+        let usart2 = self.0;
 
-        if dma1.ccr5.read().en().bit_is_set() {
+        if dma1.s5cr.read().en().bit_is_set() {
             return Err(dma::Error::InUse);
         }
 
         let buffer: &mut [u8] = buffer.lock_mut();
 
-        dma1.cndtr5
+        dma1.s5ndtr
             .write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
-        dma1.cpar5
-            .write(|w| unsafe { w.bits(&usart1.rdr as *const _ as u32) });
-        dma1.cmar5
+        dma1.s5par
+            .write(|w| unsafe { w.bits(&usart2.dr as *const _ as u32) });
+        dma1.s5m0ar
             .write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
-        dma1.ccr5.modify(|_, w| w.en().set_bit());
+        dma1.s5cr.modify(|_, w| w.en().set_bit());
 
         Ok(())
     }
@@ -372,26 +366,26 @@ impl<'a> Serial<'a, USART1> {
     pub fn write_all<B>(
         &self,
         dma1: &DMA1,
-        buffer: &Static<Buffer<B, Dma1Channel4>>,
+        buffer: &Static<Buffer<B, Dma1Channel6>>,
     ) -> ::core::result::Result<(), dma::Error>
     where
         B: Unsize<[u8]>,
     {
-        let usart1 = self.0;
+        let usart2 = self.0;
 
-        if dma1.ccr4.read().en().bit_is_set() {
+        if dma1.s6cr.read().en().bit_is_set() {
             return Err(dma::Error::InUse);
         }
 
         let buffer: &[u8] = buffer.lock();
 
-        dma1.cndtr4
+        dma1.s6ndtr
             .write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
-        dma1.cpar4
-            .write(|w| unsafe { w.bits(&usart1.tdr as *const _ as u32) });
-        dma1.cmar4
+        dma1.s6par
+            .write(|w| unsafe { w.bits(&usart2.dr as *const _ as u32) });
+        dma1.s6m0ar
             .write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
-        dma1.ccr4.modify(|_, w| w.en().set_bit());
+        dma1.s6cr.modify(|_, w| w.en().set_bit());
 
         Ok(())
     }

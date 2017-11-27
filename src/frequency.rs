@@ -1,4 +1,4 @@
-//! Definition of bus frequency details for f3.
+//! Definition of bus frequency details for f4.
 
 macro_rules! frequency {
     ($FREQUENCY:expr) => {
@@ -72,15 +72,15 @@ macro_rules! frequency {
 
 /// Advance High-performance Bus (AHB)
 pub mod ahb {
-    frequency!(8_000_000);
+    frequency!(16_000_000);
 }
 
 /// Advance Peripheral Bus 1 (APB1)
 pub mod apb1 {
-    frequency!(8_000_000);
+    frequency!(16_000_000);
 }
 
 /// Advance Peripheral Bus 2 (APB2)
 pub mod apb2 {
-    frequency!(8_000_000);
+    frequency!(16_000_000);
 }

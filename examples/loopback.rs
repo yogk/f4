@@ -5,12 +5,12 @@
 #![no_std]
 
 extern crate cortex_m_rtfm as rtfm;
-extern crate f3;
+extern crate f4;
 
-use f3::prelude::*;
-use f3::Serial;
-use f3::serial::Event;
-use f3::time::Hertz;
+use f4::prelude::*;
+use f4::Serial;
+use f4::serial::Event;
+use f4::time::Hertz;
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
@@ -18,19 +18,19 @@ const BAUD_RATE: Hertz = Hertz(115_200);
 
 // TASKS & RESOURCES
 app! {
-    device: f3::stm32f30x,
+    device: f4::stm32f40x,
 
     tasks: {
-        USART1_EXTI25: {
+        USART2: {
             path: loopback,
-            resources: [USART1],
+            resources: [USART2],
         },
     }
 }
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals) {
-    let serial = Serial(p.USART1);
+    let serial = Serial(p.USART2);
 
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
     serial.listen(Event::Rxne);
@@ -46,8 +46,8 @@ fn idle() -> ! {
 
 // TASKS
 // Send back the received byte
-fn loopback(_t: &mut Threshold, r: USART1_EXTI25::Resources) {
-    let serial = Serial(&**r.USART1);
+fn loopback(_t: &mut Threshold, r: USART2::Resources) {
+    let serial = Serial(&**r.USART2);
 
     let byte = serial.read().unwrap();
     serial.write(byte).unwrap();

@@ -1,79 +1,67 @@
 //! LED roulette and serial loopback running concurrently
 //!
 //! ```
-//! 
-//! #![feature(const_fn)]
-//! #![feature(used)]
+//! #![deny(unsafe_code)]
+//! #![deny(warnings)]
+//! #![feature(proc_macro)]
 //! #![no_std]
 //! 
-//! // version = "0.2.2", default-features = false
 //! extern crate cast;
-//! 
-//! // version = "0.2.0"
-//! extern crate cortex_m_rt;
-//! 
-//! // version = "0.1.0"
-//! #[macro_use]
+//! extern crate cortex_m;
 //! extern crate cortex_m_rtfm as rtfm;
+//! extern crate f4;
 //! 
-//! extern crate f3;
-//! 
-//! use cast::{u8, usize};
-//! use f3::led::{self, LEDS};
-//! use f3::serial::Serial;
-//! use f3::stm32f30x::interrupt::{Tim7, Usart1Exti25};
-//! use f3::stm32f30x;
-//! use f3::timer::Timer;
-//! use rtfm::{Local, P0, P1, T0, T1, TMax};
+//! use f4::Serial;
+//! use f4::led::{self, LEDS};
+//! use f4::prelude::*;
+//! use f4::serial::Event;
+//! use f4::time::Hertz;
+//! use cortex_m::peripheral::SystClkSource;
+//! use cast::{usize, u8};
+//! use rtfm::{app, Threshold};
 //! 
 //! // CONFIGURATION
-//! pub const BAUD_RATE: u32 = 115_200; // bits per second
-//! const FREQUENCY: u32 = 4; // Hz
+//! const BAUD_RATE: Hertz = Hertz(115_200);
+//! const DIVISOR: u32 = 4;
 //! 
-//! // RESOURCES
-//! peripherals!(stm32f30x, {
-//!     GPIOA: Peripheral {
-//!         register_block: Gpioa,
-//!         ceiling: C0,
+//! 
+//! // TASKS & RESOURCES
+//! app! {
+//!     device: f4::stm32f40x,
+//! 
+//!     resources: {
+//!         static STATE: u8 = 0;
 //!     },
-//!     GPIOE: Peripheral {
-//!         register_block: Gpioe,
-//!         ceiling: C0,
-//!     },
-//!     RCC: Peripheral {
-//!         register_block: Rcc,
-//!         ceiling: C0,
-//!     },
-//!     TIM7: Peripheral {
-//!         register_block: Tim7,
-//!         ceiling: C1,
-//!     },
-//!     USART1: Peripheral {
-//!         register_block: Usart1,
-//!         ceiling: C1,
-//!     },
-//! });
+//! 
+//!     tasks: {
+//!         SYS_TICK: {
+//!             path: roulette,
+//!             resources: [STATE],
+//!         },
+//! 
+//!         USART2: {
+//!             path: loopback,
+//!             resources: [USART2],
+//!         },
+//!     }
+//! }
 //! 
 //! // INITIALIZATION PHASE
-//! fn init(ref priority: P0, threshold: &TMax) {
-//!     let gpioa = GPIOA.access(priority, threshold);
-//!     let gpioe = GPIOE.access(priority, threshold);
-//!     let rcc = RCC.access(priority, threshold);
-//!     let tim7 = TIM7.access(priority, threshold);
-//!     let usart1 = USART1.access(priority, threshold);
+//! fn init(p: init::Peripherals, _r: init::Resources) {
+//!     led::init(p.GPIOA, p.RCC);
 //! 
-//!     let timer = Timer(&tim7);
-//!     let serial = Serial(&usart1);
+//!     let serial = Serial(p.USART2);
+//!     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
+//!     serial.listen(Event::Rxne);
 //! 
-//!     led::init(&gpioe, &rcc);
-//!     timer.init(&rcc, FREQUENCY);
-//!     serial.init(&gpioa, &rcc, BAUD_RATE);
-//! 
-//!     timer.resume();
+//!     p.SYST.set_clock_source(SystClkSource::Core);
+//!     p.SYST.set_reload(16_000_000 / DIVISOR);
+//!     p.SYST.enable_interrupt();
+//!     p.SYST.enable_counter();
 //! }
 //! 
 //! // IDLE LOOP
-//! fn idle(_priority: P0, _threshold: T0) -> ! {
+//! fn idle() -> ! {
 //!     // Sleep
 //!     loop {
 //!         rtfm::wfi();
@@ -81,22 +69,8 @@
 //! }
 //! 
 //! // TASKS
-//! tasks!(stm32f30x, {
-//!     loopback: Task {
-//!         interrupt: Usart1Exti25,
-//!         priority: P1,
-//!         enabled: true,
-//!     },
-//!     roulette: Task {
-//!         interrupt: Tim7,
-//!         priority: P1,
-//!         enabled: true,
-//!     },
-//! });
-//! 
-//! fn loopback(_task: Usart1Exti25, ref priority: P1, ref threshold: T1) {
-//!     let usart1 = USART1.access(priority, threshold);
-//!     let serial = Serial(&usart1);
+//! fn loopback(_t: &mut Threshold, r: USART2::Resources) {
+//!     let serial = Serial(&**r.USART2);
 //! 
 //!     if let Ok(byte) = serial.read() {
 //!         if serial.write(byte).is_err() {
@@ -112,27 +86,14 @@
 //!     }
 //! }
 //! 
-//! fn roulette(mut task: Tim7, ref priority: P1, ref threshold: T1) {
-//!     static STATE: Local<u8, Tim7> = Local::new(0);
+//! fn roulette(_t: &mut Threshold, r: SYS_TICK::Resources) {
+//!     let curr = **r.STATE;
+//!     let next = (curr + 1) % u8(LEDS.len()).unwrap();
 //! 
-//!     let tim7 = TIM7.access(priority, threshold);
-//!     let timer = Timer(&tim7);
+//!     LEDS[usize(curr)].off();
+//!     LEDS[usize(next)].on();
 //! 
-//!     if timer.clear_update_flag().is_ok() {
-//!         let state = STATE.borrow_mut(&mut task);
-//! 
-//!         let curr = *state;
-//!         let next = (curr + 1) % u8(LEDS.len()).unwrap();
-//! 
-//!         LEDS[usize(curr)].off();
-//!         LEDS[usize(next)].on();
-//! 
-//!         *state = next;
-//!     } else {
-//!         // Only reachable through `rtfm::request(roulette)`
-//!         #[cfg(debug_assertion)]
-//!         unreachable!()
-//!     }
+//!     **r.STATE = next;
 //! }
 //! ```
 // Auto-generated. Do not modify.

@@ -15,18 +15,18 @@
 extern crate cast;
 extern crate cortex_m;
 extern crate cortex_m_rtfm as rtfm;
-extern crate f3;
+extern crate f4;
 extern crate heapless;
 
 use cast::{usize, u8};
 use cortex_m::peripheral::SystClkSource;
-use f3::Serial;
-use f3::led::{self, LEDS};
-use f3::prelude::*;
-use f3::serial::Event;
+use f4::Serial;
+use f4::led::{self, LEDS};
+use f4::prelude::*;
+use f4::serial::Event;
 use heapless::Vec;
 use rtfm::{app, Resource, Threshold};
-use f3::time::Hertz;
+use f4::time::Hertz;
 
 // CONFIGURATION
 const BAUD_RATE: Hertz = Hertz(115_200);
@@ -34,7 +34,7 @@ const DIVISOR: u32 = 4;
 
 // TASK & RESOURCES
 app!{
-    device: f3::stm32f30x,
+    device: f4::stm32f40x,
 
     resources: {
         static BUFFER: Vec<u8, [u8; 16]> = Vec::new([0; 16]);
@@ -43,10 +43,10 @@ app!{
     },
 
     tasks: {
-        USART1_EXTI25: {
+        USART2: {
             path: receive,
             priority: 1,
-            resources: [BUFFER, SHARED, USART1],
+            resources: [BUFFER, SHARED, USART2],
         },
 
         SYS_TICK: {
@@ -59,9 +59,9 @@ app!{
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
-    led::init(&p.GPIOE, &p.RCC);
+    led::init(&p.GPIOA, &p.RCC);
 
-    let serial = Serial(p.USART1);
+    let serial = Serial(p.USART2);
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
     serial.listen(Event::Rxne);
 
@@ -80,8 +80,8 @@ fn idle() -> ! {
 }
 
 // TASKS
-fn receive(t: &mut Threshold, mut r: USART1_EXTI25::Resources) {
-    let serial = Serial(&**r.USART1);
+fn receive(t: &mut Threshold, mut r: USART2::Resources) {
+    let serial = Serial(&**r.USART2);
 
     let byte = serial.read().unwrap();
     if serial.write(byte).is_err() {

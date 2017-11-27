@@ -1,12 +1,8 @@
-[![Build status](https://travis-ci.org/japaric/f3.svg?branch=master)](https://travis-ci.org/japaric/f3)
-[![crates.io](https://img.shields.io/crates/d/f3.svg)](https://crates.io/crates/f3)
-[![crates.io](https://img.shields.io/crates/v/f3.svg)](https://crates.io/crates/f3)
+# `f4`
 
-# `f3`
+> Board Support Crate for the NUCLEO-F411RE
 
-> Board Support Crate for the STM32F3DISCOVERY
-
-[STM32F3DISCOVERY]: http://www.st.com/en/evaluation-tools/stm32f3discovery.html
+[NUCLEO-F411RE]: http://www.st.com/en/evaluation-tools/nucleo-f411re.html
 
 ## [Documentation](https://docs.rs/f3)
 

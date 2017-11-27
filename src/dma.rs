@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use core::ops;
 
 use nb;
-use stm32f30x::DMA1;
+use stm32f40x::DMA1;
 
 /// DMA error
 #[derive(Debug)]
@@ -24,8 +24,8 @@ pub struct Dma1Channel2 {
     _0: (),
 }
 
-/// Channel 4 of DMA1
-pub struct Dma1Channel4 {
+/// Channel 6 of DMA1
+pub struct Dma1Channel6 {
     _0: (),
 }
 
@@ -201,12 +201,12 @@ impl<T> Buffer<T, Dma1Channel2> {
             return Ok(());
         }
 
-        if dma1.isr.read().teif2().bit_is_set() {
+        if dma1.lisr.read().teif2().bit_is_set() {
             Err(nb::Error::Other(Error::Transfer))
-        } else if dma1.isr.read().tcif2().bit_is_set() {
+        } else if dma1.lisr.read().tcif2().bit_is_set() {
             unsafe { self.unlock(state) }
-            dma1.ifcr.write(|w| w.ctcif2().set_bit());
-            dma1.ccr2.modify(|_, w| w.en().clear_bit());
+            dma1.lifcr.write(|w| w.ctcif2().set_bit());
+            dma1.s2cr.modify(|_, w| w.en().clear_bit());
             Ok(())
         } else {
             Err(nb::Error::WouldBlock)
@@ -214,7 +214,7 @@ impl<T> Buffer<T, Dma1Channel2> {
     }
 }
 
-impl<T> Buffer<T, Dma1Channel4> {
+impl<T> Buffer<T, Dma1Channel6> {
     /// Waits until the DMA releases this buffer
     pub fn release(&self, dma1: &DMA1) -> nb::Result<(), Error> {
         let state = self.state.get();
@@ -223,12 +223,12 @@ impl<T> Buffer<T, Dma1Channel4> {
             return Ok(());
         }
 
-        if dma1.isr.read().teif4().bit_is_set() {
+        if dma1.hisr.read().teif6().bit_is_set() {
             Err(nb::Error::Other(Error::Transfer))
-        } else if dma1.isr.read().tcif4().bit_is_set() {
+        } else if dma1.hisr.read().tcif6().bit_is_set() {
             unsafe { self.unlock(state) }
-            dma1.ifcr.write(|w| w.ctcif4().set_bit());
-            dma1.ccr4.modify(|_, w| w.en().clear_bit());
+            dma1.hifcr.write(|w| w.ctcif6().set_bit());
+            dma1.s6cr.modify(|_, w| w.en().clear_bit());
             Ok(())
         } else {
             Err(nb::Error::WouldBlock)
@@ -245,12 +245,12 @@ impl<T> Buffer<T, Dma1Channel5> {
             return Ok(());
         }
 
-        if dma1.isr.read().teif5().bit_is_set() {
+        if dma1.hisr.read().teif5().bit_is_set() {
             Err(nb::Error::Other(Error::Transfer))
-        } else if dma1.isr.read().tcif5().bit_is_set() {
+        } else if dma1.hisr.read().tcif5().bit_is_set() {
             unsafe { self.unlock(state) }
-            dma1.ifcr.write(|w| w.ctcif5().set_bit());
-            dma1.ccr5.modify(|_, w| w.en().clear_bit());
+            dma1.hifcr.write(|w| w.ctcif5().set_bit());
+            dma1.s5cr.modify(|_, w| w.en().clear_bit());
             Ok(())
         } else {
             Err(nb::Error::WouldBlock)
