@@ -26,16 +26,14 @@ dual licensed as above, without any additional terms or conditions.
 
 ### d7018e - special studies in embedded systems
 
-Grading
-
 #### Grade 3
 Port code from f3 and/or bluepill crates to the F411RE. Example code from these crates are working.
 
 #### Grade 4
-Implement easy way to set clock frequency other than the default 16 MHz (PLL).
+Implement easy way to change between different peripheral pin configuration. Also, to set clock frequency other than the default 16 MHz (PLL).
 
 #### Grade 5
-Have the RTFM core use some external peripheral such as an IMU over SPI.
+Have the RTFM core use some external peripheral such as an IMU over SPI. Working demo of it.
 
 ### Docs
 [Nucleo 64 Manual](docs/Nucleo-64-User-manual.pdf)
