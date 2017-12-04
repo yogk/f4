@@ -36,3 +36,14 @@ Implement easy way to set clock frequency other than the default 16 MHz (PLL).
 
 #### Grade 5
 Have the RTFM core use some external peripheral such as an IMU over SPI.
+
+### Docs
+[Nucleo 64 Manual](docs/Nucleo-64-User-manual.pdf)
+
+[STM32F411 Datasheet](docs/STM32F411_Datasheet.pdf)
+
+[STM32F411 Reference Manual](docs/STM32F411_Reference_Manual.pdf)
+
+![Nucleo F411RE morpho pins](docs/Nucleo_f411re_morpho.png)
+
+![Nucleo F411RE pins](docs/Nucleo_f411re.png)
