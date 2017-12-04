@@ -23,3 +23,16 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+### d7018e - special studies in embedded systems
+
+Grading
+
+#### Grade 3
+Port code from f3 and/or bluepill crates to the F411RE. Example code from these crates are working.
+
+#### Grade 4
+Implement easy way to set clock frequency other than the default 16 MHz (PLL).
+
+#### Grade 5
+Have the RTFM core use some external peripheral such as an IMU over SPI.
