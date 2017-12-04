@@ -46,7 +46,7 @@ app! {
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
-    led::init(p.GPIOA, p.RCC);
+    led::init(p.GPIOB, p.RCC);
 
     let serial = Serial(p.USART2);
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);

@@ -35,7 +35,7 @@ app! {
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
-    led::init(p.GPIOA, p.RCC);
+    led::init(p.GPIOB, p.RCC);
 
     p.SYST.set_clock_source(SystClkSource::Core);
     p.SYST.set_reload(16_000_000 / DIVISOR);
