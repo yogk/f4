@@ -12,16 +12,17 @@
 
 ## Grading
 
-3. Implement drivers for the Nucleo 64, stm32f401re/stm32f411re, similar to the f3/bluepill support crates. Most or all of the peripherals should be supported
+3. Implement drivers for the Nucleo 64, stm32f401re/stm32f411re, similar to the f3/bluepill support crates. Most or all of the peripherals should be supported in some basic configuration
 * GPIO
 * UART over USB using the ST-Link v2
 * DMA
-* Timers for e.g.
+* Timers with configurations
   * Microsecond counter
   * PWM generation
-  * Rotary encoder
+  * Encoder mode
 * SPI
 * I^2C
+The peripheral pin configuration should match the standard Arduino headers.
 
 4. The stm32f4 supports higher clock frequency than the default 16 MHz. Implement a simple way of setting it to the maximum of 84 MHz for the stm32f401re and 100 MHz for the stm32f411re, or any valid lower value (configured using the PLL).
 
@@ -37,6 +38,8 @@
 [STM32F411 Datasheet](docs/STM32F411_Datasheet.pdf)
 
 [STM32F411 Reference Manual](docs/STM32F411_Reference_Manual.pdf)
+
+![Nucleo F411RE pins](docs/Nucleo_f411re.png)
 
 ![Nucleo F411RE morpho pins](docs/Nucleo_f411re_morpho.png)
 
@@ -55,5 +58,3 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
-
-![Nucleo F411RE pins](docs/Nucleo_f411re.png)
