@@ -2,11 +2,43 @@
 
 > Board Support Crate for the NUCLEO-F411RE
 
-[NUCLEO-F411RE]: http://www.st.com/en/evaluation-tools/nucleo-f411re.html
 
-## [Documentation](https://docs.rs/f3)
+## d7018e - special studies in embedded systems
 
-## [Change log](CHANGELOG.md)
+##### Name : Johannes Sjölund
+##### Mail : johsjl-1@student.ltu.se
+##### Personal number: 8506298978
+##### Nucleo 64 support crate
+
+## Grading
+
+3. Implement drivers for the Nucleo 64, stm32f401re/stm32f411re, similar to the f3/bluepill support crates. Most or all of the peripherals should be supported
+* GPIO
+* UART over USB using the ST-Link v2
+* DMA
+* Timers for e.g.
+  * Microsecond counter
+  * PWM generation
+  * Rotary encoder
+* SPI
+* I^2C
+
+4. The stm32f4 supports higher clock frequency than the default 16 MHz. Implement a simple way of setting it to the maximum of 84 MHz for the stm32f401re and 100 MHz for the stm32f411re, or any valid lower value (configured using the PLL).
+
+5. Create a demo using the RTFM core and some external peripheral such as an IMU or Bluetooth device. The demo should show how to use the RTFM core for safe concurrency and demonstrate different peripherals such as GPIO, USART, DMA, SPI etc.
+
+### Documentation
+[F3 Rust support crate](https://github.com/japaric/f3)
+
+[Blue-pill Rust support crate](https://github.com/japaric/blue-pill/)
+
+[Nucleo 64 Manual](docs/Nucleo-64-User-manual.pdf)
+
+[STM32F411 Datasheet](docs/STM32F411_Datasheet.pdf)
+
+[STM32F411 Reference Manual](docs/STM32F411_Reference_Manual.pdf)
+
+![Nucleo F411RE morpho pins](docs/Nucleo_f411re_morpho.png)
 
 ## License
 
@@ -23,25 +55,5 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
-
-### d7018e - special studies in embedded systems
-
-#### Grade 3
-Port code from f3 and/or bluepill crates to the F411RE. Example code from these crates are working.
-
-#### Grade 4
-Implement easy way to change between different peripheral pin configuration. Also, to set clock frequency other than the default 16 MHz (PLL).
-
-#### Grade 5
-Have the RTFM core use some external peripheral such as an IMU over SPI. Working demo of it.
-
-### Docs
-[Nucleo 64 Manual](docs/Nucleo-64-User-manual.pdf)
-
-[STM32F411 Datasheet](docs/STM32F411_Datasheet.pdf)
-
-[STM32F411 Reference Manual](docs/STM32F411_Reference_Manual.pdf)
-
-![Nucleo F411RE morpho pins](docs/Nucleo_f411re_morpho.png)
 
 ![Nucleo F411RE pins](docs/Nucleo_f411re.png)
