@@ -21,7 +21,7 @@
   * PWM generation
   * Encoder mode
 * SPI
-* I^2C
+* I²C
 The peripheral pin configuration should match the standard Arduino headers.
 
 4. The stm32f4 supports higher clock frequency than the default 16 MHz. Implement a simple way of setting it to the maximum of 84 MHz for the stm32f401re and 100 MHz for the stm32f411re, or any valid lower value (configured using the PLL).
