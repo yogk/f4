@@ -46,4 +46,5 @@ use frequency::*;
 
 pub use hal::prelude;
 pub use serial::Serial;
+pub use timer::{Channel, Timer};
 

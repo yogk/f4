@@ -13,7 +13,7 @@ use f4::led::{self, LEDS};
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
-const FREQUENCY: u32 = 4; // Hz
+const FREQUENCY: u32 = 1; // Hz
 
 // TASKS & RESOURCES
 app! {
