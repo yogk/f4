@@ -40,6 +40,7 @@ pub mod led;
 pub mod serial;
 pub mod timer;
 pub mod time;
+pub mod pwm;
 
 pub mod frequency;
 use frequency::*;
@@ -47,4 +48,4 @@ use frequency::*;
 pub use hal::prelude;
 pub use serial::Serial;
 pub use timer::{Channel, Timer};
-
+pub use pwm::Pwm;

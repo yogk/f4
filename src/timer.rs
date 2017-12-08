@@ -52,8 +52,6 @@ macro_rules! impl_Timer {
                 let tim = self.0;
 
                 // Enable TIMx
-                // Reference manual does not mention TIM6-8, TIM 12-14 
-                // although they are implemented in device crate...
                 if tim.get_type_id() == TypeId::of::<TIM1>() {
                     rcc.apb2enr.modify(|_, w| w.tim1en().set_bit());
                 } else if tim.get_type_id() == TypeId::of::<TIM2>() {
