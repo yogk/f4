@@ -21,7 +21,7 @@ app! {
 }
 
 fn init(p: init::Peripherals) {
-    let pwm = Pwm(p.TIM3);
+    let pwm = Pwm(p.TIM1);
 
     pwm.init(FREQUENCY.invert(), None, p.GPIOA,p.GPIOB,p.GPIOC, p.RCC);
     let duty = pwm.get_max_duty() / 16;

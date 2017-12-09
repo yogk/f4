@@ -31,20 +31,181 @@
 //! - CH4 = PB9
 
 use core::any::{Any, TypeId};
-// use core::marker::Unsize;
+use core::marker::Unsize;
 
 use cast::{u16, u32};
 use hal;
-// use static_ref::Static;
+use static_ref::Static;
 use stm32f40x::{DMA1, TIM1, TIM2, TIM3, TIM4, GPIOA, GPIOB, GPIOC, RCC};
 
-// use dma::{self, Buffer, Dma1Channel2};
+use dma::{self, Buffer, Dma1Channel2};
 use timer::{Channel};
 
 /// PWM driver
 pub struct Pwm<'a, T>(pub &'a T)
 where
     T: 'a;
+impl<'a> Pwm<'a, TIM1> {
+    /// Initializes the PWM module
+    pub fn init<P>(&self,
+        period: P,
+        dma1: Option<&DMA1>,
+        gpioa: &GPIOA,
+        gpiob: &GPIOB,
+        gpioc: &GPIOC,
+        rcc: &RCC
+    ) where
+        P: Into<::apb2::Ticks>,
+    {
+        self._init(period.into(), dma1, gpioa, gpiob, gpioc, rcc)
+    }
+
+    fn _init(
+        &self,
+        period: ::apb2::Ticks,
+        dma1: Option<&DMA1>,
+        gpioa: &GPIOA,
+        gpiob: &GPIOB,
+        gpioc: &GPIOC,
+        rcc: &RCC,
+    ) {
+        let tim1 = self.0;
+
+        rcc.apb2enr.modify(|_, w| w.tim1en().set_bit());
+        rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
+
+        // CH1 = PA8 = alternate push-pull
+        // CH2 = PA9 = alternate push-pull
+        // CH3 = PA10 = alternate push-pull
+        // CH4 = PA11 = alternate push-pull
+        gpioa.afrh.modify(|_, w| {
+            w.afrh8().bits(1)
+            .afrh9().bits(1)
+            .afrh10().bits(1)
+            .afrh11().bits(1)
+        });
+        gpioa.moder.modify(|_, w| {
+            w.moder8().bits(2)
+            .moder9().bits(2)
+            .moder10().bits(2)
+           .moder11().bits(2)
+        });
+
+        // PWM mode 1
+        tim1.ccmr1_output.modify(|_, w| unsafe{
+            w.oc1pe()
+                .set_bit()
+                .oc1m()
+                .bits(0b110)
+                .oc2pe()
+                .set_bit()
+                .oc2m()
+                .bits(0b110)
+        });
+        tim1.ccmr2_output.modify(|_, w| unsafe{
+            w.oc3pe()
+                .set_bit()
+                .oc3m()
+                .bits(0b110)
+                .oc4pe()
+                .set_bit()
+                .oc4m()
+                .bits(0b110)
+        });
+        tim1.ccer.modify(|_, w| {
+            w.cc1p()
+                .clear_bit()
+                .cc2p()
+                .clear_bit()
+                .cc3p()
+                .clear_bit()
+                .cc4p()
+                .clear_bit()
+        });
+        
+        tim1.bdtr.modify(|_, w| w.moe().set_bit());
+
+        self._set_period(period);
+
+        tim1.cr1.write(|w| unsafe {
+            w.cms()
+                .bits(0b00)
+                .dir()
+                .bit(false)
+                .opm()
+                .bit(false)
+                .cen()
+                .set_bit()
+        });
+    }
+
+    fn _set_period(&self, period: ::apb2::Ticks) {
+        let period = period.0;
+
+        let psc = u16((period - 1) / (1 << 16)).unwrap();
+        self.0.psc.write(|w| unsafe{w.psc().bits(psc)});
+
+        let arr = u16(period / u32(psc + 1)).unwrap();
+        self.0.arr.write(|w| unsafe{w.arr().bits(arr)});
+    }
+}
+
+impl<'a> hal::Pwm for Pwm<'a, TIM1> {
+    type Channel = Channel;
+    type Time = ::apb2::Ticks;
+    type Duty = u16;
+
+    fn disable(&self, channel: Channel) {
+        match channel {
+            Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().clear_bit()),
+            Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().clear_bit()),
+            Channel::_3 => self.0.ccer.modify(|_, w| w.cc3e().clear_bit()),
+            Channel::_4 => self.0.ccer.modify(|_, w| w.cc4e().clear_bit()),
+        }
+    }
+
+    fn enable(&self, channel: Channel) {
+        match channel {
+            Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().set_bit()),
+            Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().set_bit()),
+            Channel::_3 => self.0.ccer.modify(|_, w| w.cc3e().set_bit()),
+            Channel::_4 => self.0.ccer.modify(|_, w| w.cc4e().set_bit()),
+        }
+    }
+
+    fn get_duty(&self, channel: Channel) -> u16 {
+        match channel {
+            Channel::_1 => self.0.ccr1.read().ccr1().bits(),
+            Channel::_2 => self.0.ccr2.read().ccr2().bits(),
+            Channel::_3 => self.0.ccr3.read().ccr3().bits(),
+            Channel::_4 => self.0.ccr4.read().ccr4().bits(),
+        }
+    }
+
+    fn get_max_duty(&self) -> u16 {
+        self.0.arr.read().arr().bits()
+    }
+
+    fn get_period(&self) -> ::apb2::Ticks {
+        ::apb2::Ticks(u32(self.0.psc.read().bits() * self.0.arr.read().bits()))
+    }
+
+    fn set_duty(&self, channel: Channel, duty: u16) {
+        match channel {
+            Channel::_1 => self.0.ccr1.write(|w| unsafe{w.ccr1().bits(duty)}),
+            Channel::_2 => self.0.ccr2.write(|w| unsafe{w.ccr2().bits(duty)}),
+            Channel::_3 => self.0.ccr3.write(|w| unsafe{w.ccr3().bits(duty)}),
+            Channel::_4 => self.0.ccr4.write(|w| unsafe{w.ccr4().bits(duty)}),
+        }
+    }
+
+    fn set_period<P>(&self, period: P)
+    where
+        P: Into<::apb2::Ticks>,
+    {
+        self._set_period(period.into())
+    }
+}
 
 macro_rules! impl_Pwm {
     ($TIM:ident, $APB:ident) => {
@@ -190,6 +351,7 @@ macro_rules! impl_Pwm {
 
                 // PWM mode 1
                 if tim.get_type_id() == TypeId::of::<TIM2>() {
+                    // Ignore conflicting pin for channel 4
                     tim.ccmr1_output.modify(|_, w| unsafe {
                         w.oc1pe()
                             .set_bit()
@@ -245,47 +407,45 @@ macro_rules! impl_Pwm {
 
                 self._set_period(period);
 
-                // if let Some(dma1) = dma1 {
-                //     tim2.dier.modify(|_, w| w.ude().set_bit());
+                if let Some(dma1) = dma1 {
+                    tim.dier.modify(|_, w| w.ude().set_bit());
 
-                //     if tim2.get_type_id() == TypeId::of::<TIM2>() {
-                //         // TIM2_UP
-                //         // mem2mem: Memory to memory mode disabled
-                //         // pl: Medium priority
-                //         // msize: Memory size = 8 bits
-                //         // psize: Peripheral size = 16 bits
-                //         // minc: Memory increment mode enabled
-                //         // pinc: Peripheral increment mode disabled
-                //         // circ: Circular mode disabled
-                //         // dir: Transfer from memory to peripheral
-                //         // tceie: Transfer complete interrupt enabled
-                //         // en: Disabled
-                //         dma1.ccr2.write(|w| unsafe {
-                //             w.mem2mem()
-                //                 .clear_bit()
-                //                 .pl()
-                //                 .bits(0b01)
-                //                 .msize()
-                //                 .bits(0b00)
-                //                 .psize()
-                //                 .bits(0b01)
-                //                 .minc()
-                //                 .set_bit()
-                //                 .pinc()
-                //                 .clear_bit()
-                //                 .circ()
-                //                 .clear_bit()
-                //                 .dir()
-                //                 .set_bit()
-                //                 .tcie()
-                //                 .set_bit()
-                //                 .en()
-                //                 .clear_bit()
-                //         });
-                //     } else {
-                //         unimplemented!()
-                //     }
-                // }
+                    if tim.get_type_id() == TypeId::of::<TIM3>() {
+                        // TIM3_CH4/UP
+                        // mem2mem: Memory to memory mode disabled
+                        // pl: Medium priority
+                        // msize: Memory size = 8 bits
+                        // psize: Peripheral size = 16 bits
+                        // minc: Memory increment mode enabled
+                        // pinc: Peripheral increment mode disabled
+                        // circ: Circular mode disabled
+                        // dir: Transfer from memory to peripheral
+                        // tceie: Transfer complete interrupt enabled
+                        // en: Disabled
+                        dma1.s2cr.write(|w| unsafe {
+                            w.pl()
+                                .bits(0b01)
+                                .msize()
+                                .bits(0b00)
+                                .psize()
+                                .bits(0b01)
+                                .minc()
+                                .set_bit()
+                                .pinc()
+                                .clear_bit()
+                                .circ()
+                                .clear_bit()
+                                .dir()
+                                .bits(0)
+                                .tcie()
+                                .set_bit()
+                                .en()
+                                .clear_bit()
+                        });
+                    } else {
+                        unimplemented!()
+                    }
+                }
 
                 tim.cr1.write(|w| unsafe {
                     w.cms()
@@ -309,45 +469,45 @@ macro_rules! impl_Pwm {
                 self.0.arr.write(|w| unsafe{w.bits(arr)});
             }
 
-            // /// Uses `buffer` to continuously change the duty cycle on every period
-            // pub fn set_duties<B>(
-            //     &self,
-            //     dma1: &DMA1,
-            //     channel: Channel,
-            //     buffer: &Static<Buffer<B, Dma1Channel2>>,
-            // ) -> ::core::result::Result<(), dma::Error>
-            // where
-            //     B: Unsize<[u8]>,
-            // {
-            //     let tim2 = self.0;
+            /// Uses `buffer` to continuously change the duty cycle on every period
+            pub fn set_duties<B>(
+                &self,
+                dma1: &DMA1,
+                channel: Channel,
+                buffer: &Static<Buffer<B, Dma1Channel2>>,
+            ) -> ::core::result::Result<(), dma::Error>
+            where
+                B: Unsize<[u8]>,
+            {
+                let tim3 = self.0;
 
-            //     if tim2.get_type_id() == TypeId::of::<TIM2>() {
-            //         if dma1.ccr2.read().en().bit_is_set() {
-            //             return Err(dma::Error::InUse);
-            //         }
+                if tim3.get_type_id() == TypeId::of::<TIM3>() {
+                    if dma1.s2cr.read().en().bit_is_set() {
+                        return Err(dma::Error::InUse);
+                    }
 
-            //         let buffer: &[u8] = buffer.lock();
+                    let buffer: &[u8] = buffer.lock();
 
-            //         dma1.cndtr2
-            //             .write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
-            //         dma1.cpar2.write(|w| unsafe {
-            //             match channel {
-            //                 Channel::_1 => w.bits(&tim2.ccr1 as *const _ as u32),
-            //                 Channel::_2 => w.bits(&tim2.ccr2 as *const _ as u32),
-            //                 Channel::_3 => w.bits(&tim2.ccr3 as *const _ as u32),
-            //                 Channel::_4 => w.bits(&tim2.ccr4 as *const _ as u32),
-            //             }
-            //         });
-            //         dma1.cmar2
-            //             .write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
-            //         dma1.ccr2.modify(|_, w| w.en().set_bit());
+                    dma1.s2ndtr
+                        .write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
+                    dma1.s2par.write(|w| unsafe {
+                        match channel {
+                            Channel::_1 => w.bits(&tim3.ccr1 as *const _ as u32),
+                            Channel::_2 => w.bits(&tim3.ccr2 as *const _ as u32),
+                            Channel::_3 => w.bits(&tim3.ccr3 as *const _ as u32),
+                            Channel::_4 => w.bits(&tim3.ccr4 as *const _ as u32),
+                        }
+                    });
+                    dma1.s2m0ar
+                        .write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
+                    dma1.s2cr.modify(|_, w| w.en().set_bit());
 
-            //         Ok(())
+                    Ok(())
 
-            //     } else {
-            //         unimplemented!()
-            //     }
-            // }
+                } else {
+                    unimplemented!()
+                }
+            }
         }
 
         impl<'a> hal::Pwm for Pwm<'a, $TIM>
@@ -357,21 +517,12 @@ macro_rules! impl_Pwm {
             type Time = ::$APB::Ticks;
 
             fn get_duty(&self, channel: Channel) -> u32 {
-                // if self.0.get_type_id() == TypeId::of::<TIM1>() {
-                //     match channel {
-                //         Channel::_1 => u32(u32(self.0.ccr1.read().bits()),
-                //         Channel::_2 => u32(u32(self.0.ccr2.read().bits()),
-                //         Channel::_3 => u32(u32(self.0.ccr3.read().bits()),
-                //         Channel::_4 => u32(u32(self.0.ccr4.read().bits()),
-                //     }
-                // } else {
-                    match channel {
-                        Channel::_1 => u32(self.0.ccr1.read().ccr1_h().bits()) << 16 | u32(self.0.ccr1.read().ccr1_l().bits()),
-                        Channel::_2 => u32(self.0.ccr2.read().ccr2_h().bits()) << 16 | u32(self.0.ccr2.read().ccr2_l().bits()),
-                        Channel::_3 => u32(self.0.ccr3.read().ccr3_h().bits()) << 16 | u32(self.0.ccr3.read().ccr3_l().bits()),
-                        Channel::_4 => u32(self.0.ccr4.read().ccr4_h().bits()) << 16 | u32(self.0.ccr4.read().ccr4_l().bits()),
-                    }
-                // }
+                match channel {
+                    Channel::_1 => u32(self.0.ccr1.read().ccr1_h().bits()) << 16 | u32(self.0.ccr1.read().ccr1_l().bits()),
+                    Channel::_2 => u32(self.0.ccr2.read().ccr2_h().bits()) << 16 | u32(self.0.ccr2.read().ccr2_l().bits()),
+                    Channel::_3 => u32(self.0.ccr3.read().ccr3_h().bits()) << 16 | u32(self.0.ccr3.read().ccr3_l().bits()),
+                    Channel::_4 => u32(self.0.ccr4.read().ccr4_h().bits()) << 16 | u32(self.0.ccr4.read().ccr4_l().bits()),
+                }
             }
 
             fn disable(&self, channel: Channel) {
@@ -421,7 +572,6 @@ macro_rules! impl_Pwm {
     }
 }
 
-// impl_Pwm!(TIM1,apb2);
 impl_Pwm!(TIM2,apb1);
 impl_Pwm!(TIM3,apb1);
 impl_Pwm!(TIM4,apb1);

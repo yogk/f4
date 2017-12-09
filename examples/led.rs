@@ -7,7 +7,7 @@
 extern crate cortex_m_rtfm as rtfm;
 extern crate f4;
 
-use f4::led::{self, LEDS};
+use f4::led::{self, LED};
 use rtfm::app;
 
 // TASKS & RESOURCES
@@ -22,12 +22,10 @@ fn init(p: init::Peripherals) {
 
 // IDLE LOOP
 fn idle() -> ! {
-    for led in &LEDS {
-        led.on();
-    }
-
     // Sleep
     loop {
+        LED.on();
         rtfm::wfi();
+        LED.off();
     }
 }

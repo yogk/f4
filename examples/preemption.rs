@@ -21,7 +21,7 @@ extern crate heapless;
 use cast::{usize, u8};
 use cortex_m::peripheral::SystClkSource;
 use f4::Serial;
-use f4::led::{self, LEDS};
+use f4::leds::{LEDS};
 use f4::prelude::*;
 use f4::serial::Event;
 use heapless::Vec;
@@ -59,7 +59,7 @@ app!{
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
-    led::init(&p.GPIOA, &p.RCC);
+    f4::leds::init(&p.GPIOB, &p.RCC);
 
     let serial = Serial(p.USART2);
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);

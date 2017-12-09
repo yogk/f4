@@ -16,7 +16,7 @@
 //! [examples]: ./examples/index.html
 
 #![deny(missing_docs)]
-#![deny(warnings)]
+// #![deny(warnings)]
 #![feature(const_fn)]
 #![feature(const_unsafe_cell_new)]
 #![feature(const_cell_new)]
@@ -37,6 +37,7 @@ pub mod examples;
 
 pub mod dma;
 pub mod led;
+pub mod leds;
 pub mod serial;
 pub mod timer;
 pub mod time;

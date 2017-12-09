@@ -10,12 +10,11 @@ extern crate cortex_m_rtfm as rtfm;
 extern crate f4;
 
 use f4::Serial;
-use f4::led::{self, LEDS};
+use f4::led::{self, LED};
 use f4::prelude::*;
 use f4::serial::Event;
 use f4::time::Hertz;
 use cortex_m::peripheral::SystClkSource;
-use cast::{usize, u8};
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
@@ -28,13 +27,13 @@ app! {
     device: f4::stm32f40x,
 
     resources: {
-        static STATE: u8 = 0;
+        static ON: bool = false;
     },
 
     tasks: {
         SYS_TICK: {
             path: roulette,
-            resources: [STATE],
+            resources: [ON],
         },
 
         USART2: {
@@ -46,7 +45,7 @@ app! {
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
-    led::init(p.GPIOB, p.RCC);
+    led::init(p.GPIOA, p.RCC);
 
     let serial = Serial(p.USART2);
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
@@ -85,11 +84,11 @@ fn loopback(_t: &mut Threshold, r: USART2::Resources) {
 }
 
 fn roulette(_t: &mut Threshold, r: SYS_TICK::Resources) {
-    let curr = **r.STATE;
-    let next = (curr + 1) % u8(LEDS.len()).unwrap();
+    **r.ON = !**r.ON;
 
-    LEDS[usize(curr)].off();
-    LEDS[usize(next)].on();
-
-    **r.STATE = next;
+    if **r.ON {
+        LED.on();
+    } else {
+        LED.off();
+    }
 }

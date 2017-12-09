@@ -11,7 +11,7 @@ extern crate cortex_m_rtfm as rtfm;
 
 use cast::{usize, u8};
 use cortex_m::peripheral::SystClkSource;
-use f4::led::{self, LEDS};
+use f4::leds::{LEDS};
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
@@ -35,7 +35,7 @@ app! {
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
-    led::init(p.GPIOB, p.RCC);
+    f4::leds::init(p.GPIOB, p.RCC);
 
     p.SYST.set_clock_source(SystClkSource::Core);
     p.SYST.set_reload(16_000_000 / DIVISOR);

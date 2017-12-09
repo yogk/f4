@@ -9,7 +9,7 @@ extern crate cortex_m;
 extern crate cortex_m_rtfm as rtfm;
 
 use cortex_m::peripheral::SystClkSource;
-use f4::led::{self, LEDS};
+use f4::led::{self, LED};
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
@@ -55,8 +55,8 @@ fn toggle(_t: &mut Threshold, r: SYS_TICK::Resources) {
     **r.ON = !**r.ON;
 
     if **r.ON {
-        LEDS[0].on();
+        LED.on();
     } else {
-        LEDS[0].off();
+        LED.off();
     }
 }
