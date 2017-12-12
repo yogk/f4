@@ -17,10 +17,9 @@ use cast::u16;
 use hal;
 use nb;
 use static_ref::Static;
-use stm32f40x::{gpioa, DMA1, USART2, usart6, GPIOA,
-                  RCC};
+use stm32f40x::{gpioa, DMA1, USART2, usart6, GPIOA, RCC};
 
-use dma::{self, Buffer, Dma1Channel6, Dma1Channel5};
+use dma::{self, Buffer, Dma1Channel5, Dma1Channel6};
 
 /// Specialized `Result` type
 pub type Result<T> = ::core::result::Result<T, nb::Error<Error>>;
@@ -47,8 +46,7 @@ pub enum Error {
     Noise,
     /// RX buffer overrun
     Overrun,
-    #[doc(hidden)]
-    _Extensible,
+    #[doc(hidden)] _Extensible,
 }
 
 /// Interrupt event
@@ -94,25 +92,14 @@ where
     ///
     /// The serial interface will be configured to use 8 bits of data, 1 stop
     /// bit, no hardware control and to omit parity checking
-    pub fn init<B>(
-        &self,
-        baud_rate: B,
-        dma1: Option<&DMA1>,
-        gpio: &U::GPIO,
-        rcc: &RCC,
-    ) where
+    pub fn init<B>(&self, baud_rate: B, dma1: Option<&DMA1>, gpio: &U::GPIO, rcc: &RCC)
+    where
         B: Into<U::Ticks>,
     {
         self._init(baud_rate.into(), dma1, gpio, rcc)
     }
 
-    fn _init(
-        &self,
-        baud_rate: U::Ticks,
-        dma1: Option<&DMA1>,
-        gpio: &U::GPIO,
-        rcc: &RCC,
-    ) {
+    fn _init(&self, baud_rate: U::Ticks, dma1: Option<&DMA1>, gpio: &U::GPIO, rcc: &RCC) {
         let usart = self.0;
 
         // power up peripherals
@@ -120,22 +107,16 @@ where
             rcc.ahb1enr.modify(|_, w| w.dma1en().set_bit());
         }
         if usart.get_type_id() == TypeId::of::<USART2>() {
-            rcc.apb1enr.modify(|_, w| {
-                w.usart2en().set_bit()
-            });
+            rcc.apb1enr.modify(|_, w| w.usart2en().set_bit());
         }
 
         rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
 
         if usart.get_type_id() == TypeId::of::<USART2>() {
             // PA2. = TX, PA3 = RX
-            gpio.afrl.modify(|_, w| {
-                    w.afrl2().bits(7).afrl3().bits(7)
-            });
-            gpio.moder.modify(|_, w| {
-                w.moder2().bits(2)
-                    .moder3().bits(2)
-            });
+            gpio.afrl.modify(|_, w| w.afrl2().bits(7).afrl3().bits(7));
+            gpio.moder
+                .modify(|_, w| w.moder2().bits(2).moder3().bits(2));
         }
 
         if let Some(dma1) = dma1 {
@@ -288,9 +269,7 @@ where
         } else if sr.rxne().bit_is_set() {
             // NOTE(read_volatile) the register is 9 bits big but we'll only
             // work with the first 8 bits
-            Ok(unsafe {
-                ptr::read_volatile(&usart2.dr as *const _ as *const u8)
-            })
+            Ok(unsafe { ptr::read_volatile(&usart2.dr as *const _ as *const u8) })
         } else {
             Err(nb::Error::WouldBlock)
         }
@@ -315,9 +294,7 @@ where
             Err(nb::Error::Other(Error::Framing))
         } else if sr.txe().bit_is_set() {
             // NOTE(write_volatile) see NOTE in the `read` method
-            unsafe {
-                ptr::write_volatile(&usart2.dr as *const _ as *mut u8, byte)
-            }
+            unsafe { ptr::write_volatile(&usart2.dr as *const _ as *mut u8, byte) }
             Ok(())
         } else {
             Err(nb::Error::WouldBlock)

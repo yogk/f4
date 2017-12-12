@@ -1,0 +1,57 @@
+//! Input capture using TIM4
+#![deny(unsafe_code)]
+#![deny(warnings)]
+#![feature(proc_macro)]
+#![no_std]
+
+#[macro_use]
+extern crate cortex_m;
+extern crate cortex_m_rtfm as rtfm;
+extern crate f4;
+extern crate nb;
+
+use f4::time::Milliseconds;
+use f4::{Capture, Channel};
+use f4::prelude::*;
+use rtfm::{app, Threshold};
+
+const RESOLUTION: Milliseconds = Milliseconds(1);
+
+app! {
+    device: f4::stm32f40x,
+
+    idle: {
+        resources: [ITM, TIM4],
+    },
+}
+
+fn init(p: init::Peripherals) {
+    let capture = Capture(p.TIM4);
+
+    capture.init(RESOLUTION, p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
+}
+
+fn idle(_t: &mut Threshold, r: idle::Resources) -> ! {
+    const CHANNELS: [Channel; 4] = [Channel::_1, Channel::_2, Channel::_3, Channel::_4];
+
+    let capture = Capture(&*r.TIM4);
+
+    for c in &CHANNELS {
+        capture.enable(*c);
+    }
+
+    loop {
+        for c in &CHANNELS {
+            match capture.capture(*c) {
+                Ok(snapshot) => {
+                    iprintln!(&r.ITM.stim[0], "{:?}: {:?} ms", c, snapshot);
+                }
+                Err(nb::Error::WouldBlock) => {}
+                Err(nb::Error::Other(e)) => {
+                    iprintln!(&r.ITM.stim[0], "{:?}: {:?}", c, e);
+                    panic!("{:?}", e);
+                }
+            }
+        }
+    }
+}

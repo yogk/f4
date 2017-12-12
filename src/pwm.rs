@@ -39,7 +39,7 @@ use static_ref::Static;
 use stm32f40x::{DMA1, TIM1, TIM2, TIM3, TIM4, GPIOA, GPIOB, GPIOC, RCC};
 
 use dma::{self, Buffer, Dma1Channel2};
-use timer::{Channel};
+use timer::Channel;
 
 /// PWM driver
 pub struct Pwm<'a, T>(pub &'a T)
@@ -47,13 +47,14 @@ where
     T: 'a;
 impl<'a> Pwm<'a, TIM1> {
     /// Initializes the PWM module
-    pub fn init<P>(&self,
+    pub fn init<P>(
+        &self,
         period: P,
         dma1: Option<&DMA1>,
-        gpioa: &GPIOA,
+        gpioa: &GPIOA, // TODO: Make these optional/implement custom init for each TIM
         gpiob: &GPIOB,
         gpioc: &GPIOC,
-        rcc: &RCC
+        rcc: &RCC,
     ) where
         P: Into<::apb2::Ticks>,
     {
@@ -79,20 +80,28 @@ impl<'a> Pwm<'a, TIM1> {
         // CH3 = PA10 = alternate push-pull
         // CH4 = PA11 = alternate push-pull
         gpioa.afrh.modify(|_, w| {
-            w.afrh8().bits(1)
-            .afrh9().bits(1)
-            .afrh10().bits(1)
-            .afrh11().bits(1)
+            w.afrh8()
+                .bits(1)
+                .afrh9()
+                .bits(1)
+                .afrh10()
+                .bits(1)
+                .afrh11()
+                .bits(1)
         });
         gpioa.moder.modify(|_, w| {
-            w.moder8().bits(2)
-            .moder9().bits(2)
-            .moder10().bits(2)
-           .moder11().bits(2)
+            w.moder8()
+                .bits(2)
+                .moder9()
+                .bits(2)
+                .moder10()
+                .bits(2)
+                .moder11()
+                .bits(2)
         });
 
         // PWM mode 1
-        tim1.ccmr1_output.modify(|_, w| unsafe{
+        tim1.ccmr1_output.modify(|_, w| unsafe {
             w.oc1pe()
                 .set_bit()
                 .oc1m()
@@ -102,7 +111,7 @@ impl<'a> Pwm<'a, TIM1> {
                 .oc2m()
                 .bits(0b110)
         });
-        tim1.ccmr2_output.modify(|_, w| unsafe{
+        tim1.ccmr2_output.modify(|_, w| unsafe {
             w.oc3pe()
                 .set_bit()
                 .oc3m()
@@ -122,7 +131,7 @@ impl<'a> Pwm<'a, TIM1> {
                 .cc4p()
                 .clear_bit()
         });
-        
+
         tim1.bdtr.modify(|_, w| w.moe().set_bit());
 
         self._set_period(period);
@@ -143,10 +152,10 @@ impl<'a> Pwm<'a, TIM1> {
         let period = period.0;
 
         let psc = u16((period - 1) / (1 << 16)).unwrap();
-        self.0.psc.write(|w| unsafe{w.psc().bits(psc)});
+        self.0.psc.write(|w| unsafe { w.psc().bits(psc) });
 
         let arr = u16(period / u32(psc + 1)).unwrap();
-        self.0.arr.write(|w| unsafe{w.arr().bits(arr)});
+        self.0.arr.write(|w| unsafe { w.arr().bits(arr) });
     }
 }
 
@@ -192,10 +201,10 @@ impl<'a> hal::Pwm for Pwm<'a, TIM1> {
 
     fn set_duty(&self, channel: Channel, duty: u16) {
         match channel {
-            Channel::_1 => self.0.ccr1.write(|w| unsafe{w.ccr1().bits(duty)}),
-            Channel::_2 => self.0.ccr2.write(|w| unsafe{w.ccr2().bits(duty)}),
-            Channel::_3 => self.0.ccr3.write(|w| unsafe{w.ccr3().bits(duty)}),
-            Channel::_4 => self.0.ccr4.write(|w| unsafe{w.ccr4().bits(duty)}),
+            Channel::_1 => self.0.ccr1.write(|w| unsafe { w.ccr1().bits(duty) }),
+            Channel::_2 => self.0.ccr2.write(|w| unsafe { w.ccr2().bits(duty) }),
+            Channel::_3 => self.0.ccr3.write(|w| unsafe { w.ccr3().bits(duty) }),
+            Channel::_4 => self.0.ccr4.write(|w| unsafe { w.ccr4().bits(duty) }),
         }
     }
 
@@ -242,9 +251,7 @@ macro_rules! impl_Pwm {
                     rcc.ahb1enr.modify(|_, w| w.dma1en().set_bit());
                 }
 
-                if tim.get_type_id() == TypeId::of::<TIM1>() {
-                    rcc.apb2enr.modify(|_, w| w.tim1en().set_bit());
-                } else if tim.get_type_id() == TypeId::of::<TIM2>() {
+                if tim.get_type_id() == TypeId::of::<TIM2>() {
                     rcc.apb1enr.modify(|_, w| w.tim2en().set_bit());
                 } else if tim.get_type_id() == TypeId::of::<TIM3>() {
                     rcc.apb1enr.modify(|_, w| w.tim3en().set_bit());
@@ -253,9 +260,7 @@ macro_rules! impl_Pwm {
                 }
 
                 rcc.ahb1enr.modify(|_, w| {
-                    if tim.get_type_id() == TypeId::of::<TIM1>() {
-                        w.gpioaen().set_bit()
-                    } else if tim.get_type_id() == TypeId::of::<TIM2>() {
+                    if tim.get_type_id() == TypeId::of::<TIM2>() {
                         w.gpioaen().set_bit().gpioben().set_bit()
                     } else if tim.get_type_id() == TypeId::of::<TIM3>() {
                         w.gpioaen().set_bit().gpioben().set_bit().gpiocen().set_bit()
@@ -320,7 +325,7 @@ macro_rules! impl_Pwm {
                     gpioc.moder.modify(|_, w| { unsafe {
                         w.moder7().bits(2)
                         }
-                    });    
+                    });
 
                 } else if tim.get_type_id() == TypeId::of::<TIM4>() {
                     // CH1 = PB6 = alternate push-pull
@@ -518,10 +523,14 @@ macro_rules! impl_Pwm {
 
             fn get_duty(&self, channel: Channel) -> u32 {
                 match channel {
-                    Channel::_1 => u32(self.0.ccr1.read().ccr1_h().bits()) << 16 | u32(self.0.ccr1.read().ccr1_l().bits()),
-                    Channel::_2 => u32(self.0.ccr2.read().ccr2_h().bits()) << 16 | u32(self.0.ccr2.read().ccr2_l().bits()),
-                    Channel::_3 => u32(self.0.ccr3.read().ccr3_h().bits()) << 16 | u32(self.0.ccr3.read().ccr3_l().bits()),
-                    Channel::_4 => u32(self.0.ccr4.read().ccr4_h().bits()) << 16 | u32(self.0.ccr4.read().ccr4_l().bits()),
+                    Channel::_1 => u32(self.0.ccr1.read().ccr1_h().bits())
+                     << 16 | u32(self.0.ccr1.read().ccr1_l().bits()),
+                    Channel::_2 => u32(self.0.ccr2.read().ccr2_h().bits())
+                     << 16 | u32(self.0.ccr2.read().ccr2_l().bits()),
+                    Channel::_3 => u32(self.0.ccr3.read().ccr3_h().bits())
+                     << 16 | u32(self.0.ccr3.read().ccr3_l().bits()),
+                    Channel::_4 => u32(self.0.ccr4.read().ccr4_h().bits())
+                     << 16 | u32(self.0.ccr4.read().ccr4_l().bits()),
                 }
             }
 
@@ -555,10 +564,14 @@ macro_rules! impl_Pwm {
                 let dutyl : u16 = u16(duty).unwrap();
                 let dutyh : u16 = u16(duty >> 16).unwrap();
                 match channel {
-                    Channel::_1 => self.0.ccr1.write(|w| unsafe{w.ccr1_h().bits(dutyh).ccr1_l().bits(dutyl)}),
-                    Channel::_2 => self.0.ccr2.write(|w| unsafe{w.ccr2_h().bits(dutyh).ccr2_l().bits(dutyl)}),
-                    Channel::_3 => self.0.ccr3.write(|w| unsafe{w.ccr3_h().bits(dutyh).ccr3_l().bits(dutyl)}),
-                    Channel::_4 => self.0.ccr4.write(|w| unsafe{w.ccr4_h().bits(dutyh).ccr4_l().bits(dutyl)}),
+                    Channel::_1 => self.0.ccr1.write(|w| unsafe{
+                        w.ccr1_h().bits(dutyh).ccr1_l().bits(dutyl)}),
+                    Channel::_2 => self.0.ccr2.write(|w| unsafe{
+                        w.ccr2_h().bits(dutyh).ccr2_l().bits(dutyl)}),
+                    Channel::_3 => self.0.ccr3.write(|w| unsafe{
+                        w.ccr3_h().bits(dutyh).ccr3_l().bits(dutyl)}),
+                    Channel::_4 => self.0.ccr4.write(|w| unsafe{
+                        w.ccr4_h().bits(dutyh).ccr4_l().bits(dutyl)}),
                 }
             }
 
@@ -572,6 +585,6 @@ macro_rules! impl_Pwm {
     }
 }
 
-impl_Pwm!(TIM2,apb1);
-impl_Pwm!(TIM3,apb1);
-impl_Pwm!(TIM4,apb1);
+impl_Pwm!(TIM2, apb1);
+impl_Pwm!(TIM3, apb1);
+impl_Pwm!(TIM4, apb1);

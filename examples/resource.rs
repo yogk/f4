@@ -24,7 +24,7 @@ extern crate heapless;
 use cast::{usize, u8};
 use cortex_m::peripheral::SystClkSource;
 use f4::Serial;
-use f4::leds::{LEDS};
+use f4::leds::LEDS;
 use f4::prelude::*;
 use f4::serial::Event;
 use f4::time::Hertz;
@@ -33,7 +33,7 @@ use rtfm::{app, Threshold};
 
 // CONFIGURATION
 const BAUD_RATE: Hertz = Hertz(115_200);
-const DIVISOR: u32 = 4; 
+const DIVISOR: u32 = 4;
 
 // TASKS & RESOURCES
 app! {

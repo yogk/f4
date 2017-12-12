@@ -39,19 +39,22 @@ pub fn init(gpioa: &GPIOB, rcc: &RCC) {
     rcc.ahb1enr.modify(|_, w| w.gpioben().set_bit());
 
     // Configure pins 8-15 as outputs
-    gpioa
-        .moder
-        .modify(
-            |_, w| {unsafe {
-                w.moder2().bits(1)
-                .moder1().bits(1)
-                .moder15().bits(1)
-                .moder14().bits(1)
-                .moder13().bits(1)
-                .moder5().bits(1)
-                .moder4().bits(1)
-                .moder10().bits(1)
-                }
-            },
-        );
+    gpioa.moder.modify(|_, w| unsafe {
+        w.moder2()
+            .bits(1)
+            .moder1()
+            .bits(1)
+            .moder15()
+            .bits(1)
+            .moder14()
+            .bits(1)
+            .moder13()
+            .bits(1)
+            .moder5()
+            .bits(1)
+            .moder4()
+            .bits(1)
+            .moder10()
+            .bits(1)
+    });
 }

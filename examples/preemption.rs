@@ -21,7 +21,7 @@ extern crate heapless;
 use cast::{usize, u8};
 use cortex_m::peripheral::SystClkSource;
 use f4::Serial;
-use f4::leds::{LEDS};
+use f4::leds::LEDS;
 use f4::prelude::*;
 use f4::serial::Event;
 use heapless::Vec;
@@ -96,14 +96,14 @@ fn receive(t: &mut Threshold, mut r: USART2::Resources) {
 
         match &***r.BUFFER {
             b"bounce" => {
-                r.SHARED
-                    .claim_mut(t, |shared, _| { shared.mode = Mode::Bounce; });
+                r.SHARED.claim_mut(t, |shared, _| {
+                    shared.mode = Mode::Bounce;
+                });
             }
             b"continuous" => {
-                r.SHARED.claim_mut(
-                    t,
-                    |shared, _| { shared.mode = Mode::Continuous; },
-                );
+                r.SHARED.claim_mut(t, |shared, _| {
+                    shared.mode = Mode::Continuous;
+                });
             }
             b"reverse" => {
                 r.SHARED.claim_mut(t, |shared, _| {

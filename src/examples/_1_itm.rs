@@ -10,32 +10,32 @@
 //! #![deny(warnings)]
 //! #![feature(proc_macro)]
 //! #![no_std]
-//! 
+//!
 //! #[macro_use]
 //! extern crate cortex_m;
 //! extern crate cortex_m_rtfm as rtfm;
 //! extern crate f4;
-//! 
+//!
 //! use rtfm::{app, Threshold};
-//! 
+//!
 //! // TASK & RESOURCES
 //! app! {
 //!     device: f4::stm32f40x,
-//! 
+//!
 //!     idle: {
 //!         resources: [ITM],
 //!     },
 //! }
-//! 
+//!
 //! // INITIALIZATION PHASE
 //! fn init(p: init::Peripherals) {
 //!     iprintln!(&p.ITM.stim[0], "Hello");
 //! }
-//! 
+//!
 //! // IDLE LOOP
 //! fn idle(_t: &mut Threshold, r: idle::Resources) -> ! {
 //!     iprintln!(&r.ITM.stim[0], "World");
-//! 
+//!
 //!     // Sleep
 //!     loop {
 //!         rtfm::wfi();

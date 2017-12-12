@@ -5,13 +5,13 @@
 #![no_std]
 
 extern crate cast;
-extern crate f4;
 extern crate cortex_m;
 extern crate cortex_m_rtfm as rtfm;
+extern crate f4;
 
 use cast::{usize, u8};
 use cortex_m::peripheral::SystClkSource;
-use f4::leds::{LEDS};
+use f4::leds::LEDS;
 use rtfm::{app, Threshold};
 
 // CONFIGURATION

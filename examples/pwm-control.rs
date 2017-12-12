@@ -9,8 +9,8 @@
 #![feature(proc_macro)]
 #![no_std]
 
-extern crate f4;
 extern crate cortex_m_rtfm as rtfm;
+extern crate f4;
 
 use core::u32;
 

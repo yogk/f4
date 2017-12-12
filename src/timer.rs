@@ -5,7 +5,7 @@ use core::any::{Any, TypeId};
 use cast::{u16, u32};
 use hal;
 use nb::{self, Error};
-use stm32f40x::{TIM1, TIM2, TIM3, TIM4, TIM5, TIM9, TIM10, TIM11, RCC};
+use stm32f40x::{TIM1, TIM10, TIM11, TIM2, TIM3, TIM4, TIM5, TIM9, RCC};
 
 /// Channel associated to a timer
 #[derive(Clone, Copy, Debug)]
@@ -92,7 +92,7 @@ macro_rules! impl_Timer {
         }
 
         impl<'a> hal::Timer for Timer<'a, $TIM>
-            {
+        {
             type Time = ::$APB::Ticks;
 
             fn get_timeout(&self) -> ::$APB::Ticks {
@@ -100,36 +100,36 @@ macro_rules! impl_Timer {
                         u32(self.0.psc.read().psc().bits() + 1) *
                             u32(self.0.arr.read().bits()),
                     )
-                }
+            }
 
-                fn pause(&self) {
-                    self.0.cr1.modify(|_, w| w.cen().clear_bit());
-                }
+                    fn pause(&self) {
+                self.0.cr1.modify(|_, w| w.cen().clear_bit());
+            }
 
-                fn restart(&self) {
-                    self.0.cnt.write(|w| unsafe{w.bits(0)});
-                }
+            fn restart(&self) {
+                self.0.cnt.write(|w| unsafe{w.bits(0)});
+            }
 
-                fn resume(&self) {
-                    self.0.cr1.modify(|_, w| w.cen().set_bit());
-                }
+            fn resume(&self) {
+                self.0.cr1.modify(|_, w| w.cen().set_bit());
+            }
 
-                fn set_timeout<TO>(&self, timeout: TO)
-                where
-                    TO: Into<::$APB::Ticks>,
-                {
-                    self._set_timeout(timeout.into())
-                }
+            fn set_timeout<TO>(&self, timeout: TO)
+            where
+                TO: Into<::$APB::Ticks>,
+            {
+                self._set_timeout(timeout.into())
+            }
 
-                fn wait(&self) -> nb::Result<(), !> {
-                    if self.0.sr.read().uif().bit_is_clear() {
-                        Err(Error::WouldBlock)
-                    } else {
-                        self.0.sr.modify(|_, w| w.uif().clear_bit());
-                        Ok(())
-                    }
+            fn wait(&self) -> nb::Result<(), !> {
+                if self.0.sr.read().uif().bit_is_clear() {
+                    Err(Error::WouldBlock)
+                } else {
+                    self.0.sr.modify(|_, w| w.uif().clear_bit());
+                    Ok(())
                 }
             }
+        }
     }
 }
 

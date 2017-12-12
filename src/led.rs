@@ -17,7 +17,6 @@ pub fn init(gpioa: &GPIOA, rcc: &RCC) {
 
     // configure PC13 as output
     gpioa.moder.write(|w| w.moder5().bits(1));
-
 }
 
 impl PA5 {
