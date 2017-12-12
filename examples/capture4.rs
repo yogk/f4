@@ -26,7 +26,6 @@ app! {
     },
 }
 
-
 fn init(p: init::Peripherals) {
     let capture = Capture(p.TIM4);
 
