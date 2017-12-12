@@ -1,6 +1,3 @@
-//! Output a PWM with a duty cycle of ~6% on all the channels of TIM1
-// FIXME doesn't seem to work :-(
-
 #![deny(unsafe_code)]
 #![deny(warnings)]
 #![feature(proc_macro)]
@@ -21,20 +18,23 @@ app! {
 }
 
 fn init(p: init::Peripherals) {
-    let pwm = Pwm(p.TIM1);
-
-    pwm.init(FREQUENCY.invert(), None, p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
-    let duty = pwm.get_max_duty() / 16;
+    let pwm = Pwm(p.TIM4);
 
     const CHANNELS: [Channel; 4] = [Channel::_1, Channel::_2, Channel::_3, Channel::_4];
 
     for c in &CHANNELS {
-        pwm.set_duty(*c, duty);
-    }
-
-    for c in &CHANNELS {
+        pwm.init(
+            FREQUENCY.invert(),
+            *c,
+            None,
+            p.GPIOA,
+            p.GPIOB,
+            p.GPIOC,
+            p.RCC,
+        );
+        pwm.set_duty(*c, pwm.get_max_duty() / 16);
         pwm.enable(*c);
-        rtfm::bkpt();
+        // rtfm::bkpt();
     }
 }
 

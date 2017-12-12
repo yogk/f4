@@ -16,6 +16,7 @@ use f4::prelude::*;
 use rtfm::{app, Threshold};
 
 const RESOLUTION: Milliseconds = Milliseconds(1);
+const CHANNELS: [Channel; 2] = [Channel::_1, Channel::_2];
 
 app! {
     device: f4::stm32f40x,
@@ -25,20 +26,18 @@ app! {
     },
 }
 
+
 fn init(p: init::Peripherals) {
     let capture = Capture(p.TIM4);
 
-    capture.init(RESOLUTION, p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
+    for c in &CHANNELS {
+        capture.init(RESOLUTION, *c, p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
+        capture.enable(*c);
+    }
 }
 
 fn idle(_t: &mut Threshold, r: idle::Resources) -> ! {
-    const CHANNELS: [Channel; 4] = [Channel::_1, Channel::_2, Channel::_3, Channel::_4];
-
     let capture = Capture(&*r.TIM4);
-
-    for c in &CHANNELS {
-        capture.enable(*c);
-    }
 
     loop {
         for c in &CHANNELS {

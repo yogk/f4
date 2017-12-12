@@ -14,7 +14,7 @@
 //! - CH1 = PA0
 //! - CH2 = PA1
 //! - CH3 = PB10
-//! - CH4 = PA3 (Unimplemented: conflicts with USB USART2_RX)
+//! - CH4 = PA3 (Not implemented: conflicts with USB USART2_RX)
 //!
 //! # TIM3
 //!
@@ -45,176 +45,6 @@ use timer::Channel;
 pub struct Pwm<'a, T>(pub &'a T)
 where
     T: 'a;
-impl<'a> Pwm<'a, TIM1> {
-    /// Initializes the PWM module
-    pub fn init<P>(
-        &self,
-        period: P,
-        dma1: Option<&DMA1>,
-        gpioa: &GPIOA, // TODO: Make these optional/implement custom init for each TIM
-        gpiob: &GPIOB,
-        gpioc: &GPIOC,
-        rcc: &RCC,
-    ) where
-        P: Into<::apb2::Ticks>,
-    {
-        self._init(period.into(), dma1, gpioa, gpiob, gpioc, rcc)
-    }
-
-    fn _init(
-        &self,
-        period: ::apb2::Ticks,
-        dma1: Option<&DMA1>,
-        gpioa: &GPIOA,
-        gpiob: &GPIOB,
-        gpioc: &GPIOC,
-        rcc: &RCC,
-    ) {
-        let tim1 = self.0;
-
-        rcc.apb2enr.modify(|_, w| w.tim1en().set_bit());
-        rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
-
-        // CH1 = PA8 = alternate push-pull
-        // CH2 = PA9 = alternate push-pull
-        // CH3 = PA10 = alternate push-pull
-        // CH4 = PA11 = alternate push-pull
-        gpioa.afrh.modify(|_, w| {
-            w.afrh8()
-                .bits(1)
-                .afrh9()
-                .bits(1)
-                .afrh10()
-                .bits(1)
-                .afrh11()
-                .bits(1)
-        });
-        gpioa.moder.modify(|_, w| {
-            w.moder8()
-                .bits(2)
-                .moder9()
-                .bits(2)
-                .moder10()
-                .bits(2)
-                .moder11()
-                .bits(2)
-        });
-
-        // PWM mode 1
-        tim1.ccmr1_output.modify(|_, w| unsafe {
-            w.oc1pe()
-                .set_bit()
-                .oc1m()
-                .bits(0b110)
-                .oc2pe()
-                .set_bit()
-                .oc2m()
-                .bits(0b110)
-        });
-        tim1.ccmr2_output.modify(|_, w| unsafe {
-            w.oc3pe()
-                .set_bit()
-                .oc3m()
-                .bits(0b110)
-                .oc4pe()
-                .set_bit()
-                .oc4m()
-                .bits(0b110)
-        });
-        tim1.ccer.modify(|_, w| {
-            w.cc1p()
-                .clear_bit()
-                .cc2p()
-                .clear_bit()
-                .cc3p()
-                .clear_bit()
-                .cc4p()
-                .clear_bit()
-        });
-
-        tim1.bdtr.modify(|_, w| w.moe().set_bit());
-
-        self._set_period(period);
-
-        tim1.cr1.write(|w| unsafe {
-            w.cms()
-                .bits(0b00)
-                .dir()
-                .bit(false)
-                .opm()
-                .bit(false)
-                .cen()
-                .set_bit()
-        });
-    }
-
-    fn _set_period(&self, period: ::apb2::Ticks) {
-        let period = period.0;
-
-        let psc = u16((period - 1) / (1 << 16)).unwrap();
-        self.0.psc.write(|w| unsafe { w.psc().bits(psc) });
-
-        let arr = u16(period / u32(psc + 1)).unwrap();
-        self.0.arr.write(|w| unsafe { w.arr().bits(arr) });
-    }
-}
-
-impl<'a> hal::Pwm for Pwm<'a, TIM1> {
-    type Channel = Channel;
-    type Time = ::apb2::Ticks;
-    type Duty = u16;
-
-    fn disable(&self, channel: Channel) {
-        match channel {
-            Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().clear_bit()),
-            Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().clear_bit()),
-            Channel::_3 => self.0.ccer.modify(|_, w| w.cc3e().clear_bit()),
-            Channel::_4 => self.0.ccer.modify(|_, w| w.cc4e().clear_bit()),
-        }
-    }
-
-    fn enable(&self, channel: Channel) {
-        match channel {
-            Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().set_bit()),
-            Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().set_bit()),
-            Channel::_3 => self.0.ccer.modify(|_, w| w.cc3e().set_bit()),
-            Channel::_4 => self.0.ccer.modify(|_, w| w.cc4e().set_bit()),
-        }
-    }
-
-    fn get_duty(&self, channel: Channel) -> u16 {
-        match channel {
-            Channel::_1 => self.0.ccr1.read().ccr1().bits(),
-            Channel::_2 => self.0.ccr2.read().ccr2().bits(),
-            Channel::_3 => self.0.ccr3.read().ccr3().bits(),
-            Channel::_4 => self.0.ccr4.read().ccr4().bits(),
-        }
-    }
-
-    fn get_max_duty(&self) -> u16 {
-        self.0.arr.read().arr().bits()
-    }
-
-    fn get_period(&self) -> ::apb2::Ticks {
-        ::apb2::Ticks(u32(self.0.psc.read().bits() * self.0.arr.read().bits()))
-    }
-
-    fn set_duty(&self, channel: Channel, duty: u16) {
-        match channel {
-            Channel::_1 => self.0.ccr1.write(|w| unsafe { w.ccr1().bits(duty) }),
-            Channel::_2 => self.0.ccr2.write(|w| unsafe { w.ccr2().bits(duty) }),
-            Channel::_3 => self.0.ccr3.write(|w| unsafe { w.ccr3().bits(duty) }),
-            Channel::_4 => self.0.ccr4.write(|w| unsafe { w.ccr4().bits(duty) }),
-        }
-    }
-
-    fn set_period<P>(&self, period: P)
-    where
-        P: Into<::apb2::Ticks>,
-    {
-        self._set_period(period.into())
-    }
-}
 
 macro_rules! impl_Pwm {
     ($TIM:ident, $APB:ident) => {
@@ -224,6 +54,7 @@ macro_rules! impl_Pwm {
             pub fn init<P>(
                 &self,
                 period: P,
+                channel: Channel,
                 dma1: Option<&DMA1>,
                 gpioa: &GPIOA,
                 gpiob: &GPIOB,
@@ -232,12 +63,13 @@ macro_rules! impl_Pwm {
             ) where
                 P: Into<::$APB::Ticks>,
             {
-                self._init(period.into(), dma1, gpioa, gpiob, gpioc, rcc)
+                self._init(period.into(), channel, dma1, gpioa, gpiob, gpioc, rcc)
             }
 
             fn _init(
                 &self,
                 period: ::$APB::Ticks,
+                channel: Channel,
                 dma1: Option<&DMA1>,
                 gpioa: &GPIOA,
                 gpiob: &GPIOB,
@@ -251,7 +83,9 @@ macro_rules! impl_Pwm {
                     rcc.ahb1enr.modify(|_, w| w.dma1en().set_bit());
                 }
 
-                if tim.get_type_id() == TypeId::of::<TIM2>() {
+                if tim.get_type_id() == TypeId::of::<TIM1>() {
+                    rcc.apb2enr.modify(|_, w| w.tim1en().set_bit());
+                } else if tim.get_type_id() == TypeId::of::<TIM2>() {
                     rcc.apb1enr.modify(|_, w| w.tim2en().set_bit());
                 } else if tim.get_type_id() == TypeId::of::<TIM3>() {
                     rcc.apb1enr.modify(|_, w| w.tim3en().set_bit());
@@ -260,10 +94,22 @@ macro_rules! impl_Pwm {
                 }
 
                 rcc.ahb1enr.modify(|_, w| {
-                    if tim.get_type_id() == TypeId::of::<TIM2>() {
-                        w.gpioaen().set_bit().gpioben().set_bit()
+                    if tim.get_type_id() == TypeId::of::<TIM1>() {
+                        w.gpioaen().set_bit()
+                    } else if tim.get_type_id() == TypeId::of::<TIM2>() {
+                        match channel {
+                            Channel::_1 =>  w.gpioaen().set_bit(),
+                            Channel::_2 =>  w.gpioaen().set_bit(),
+                            Channel::_3 =>  w.gpioben().set_bit(),
+                            Channel::_4 =>  panic!("Not implemented: conflicts with USB USART2_RX"),
+                        }
                     } else if tim.get_type_id() == TypeId::of::<TIM3>() {
-                        w.gpioaen().set_bit().gpioben().set_bit().gpiocen().set_bit()
+                        match channel {
+                            Channel::_1 =>  w.gpioaen().set_bit(),
+                            Channel::_2 =>  w.gpiocen().set_bit(),
+                            Channel::_3 =>  w.gpioben().set_bit(),
+                            Channel::_4 =>  w.gpioben().set_bit(),
+                        }
                     } else if tim.get_type_id() == TypeId::of::<TIM4>() {
                         w.gpioben().set_bit()
                     } else {
@@ -271,143 +117,124 @@ macro_rules! impl_Pwm {
                     }
                 });
 
-                if tim.get_type_id() == TypeId::of::<TIM2>() {
+                // See datasheet DM00115249 Table 9. Alternate function mapping
+                if tim.get_type_id() == TypeId::of::<TIM1>() {
+                    // CH1 = PA8 = alternate push-pull
+                    // CH2 = PA9 = alternate push-pull
+                    // CH3 = PA10 = alternate push-pull
+                    // CH4 = PA11 = alternate push-pull
+                    match channel {
+                        Channel::_1 => {
+                            gpioa.afrh.modify(|_, w|  w.afrh8().bits(1));
+                            gpioa.moder.modify(|_, w| w.moder8().bits(2));
+                        }
+                        Channel::_2 => {
+                            gpioa.afrh.modify(|_, w|  w.afrh9().bits(1));
+                            gpioa.moder.modify(|_, w| w.moder9().bits(2));
+                        }
+                        Channel::_3 => {
+                            gpioa.afrh.modify(|_, w|  w.afrh10().bits(1));
+                            gpioa.moder.modify(|_, w| w.moder10().bits(2));
+                        }
+                        Channel::_4 => {
+                            gpioa.afrh.modify(|_, w|  w.afrh11().bits(1));
+                            gpioa.moder.modify(|_, w| w.moder11().bits(2));
+                        }
+                    }
+                } else if tim.get_type_id() == TypeId::of::<TIM2>() {
                     // CH1 = PA0 = alternate push-pull
                     // CH2 = PA1 = alternate push-pull
                     // CH3 = PB10 = alternate push-pull
-                    // CH4 = PA3 = alternate push-pull (Unimplemented: conflicts with USB USART2_RX)
+                    // CH4 = PA3 = alternate push-pull (Not implemented: conflicts with USB USART2_RX)
 
                     // See datasheet DM00115249 Table 9. Alternate function mapping
-                    gpioa.afrl.modify(|_, w| {
-                        w
-                        .afrl0().bits(1)
-                        .afrl1().bits(1)
-                    });
-                    gpioa.moder.modify(|_, w| {
-                        w
-                        .moder0().bits(2)
-                        .moder1().bits(2)
-                    });
-                    gpiob.afrh.modify(|_, w| { unsafe {
-                        w
-                        .afrh10().bits(1)}
-                    });
-                    gpiob.moder.modify(|_, w| { unsafe {
-                        w
-                        .moder10().bits(2)
+                    match channel {
+                        Channel::_1 => {
+                            gpioa.afrl.modify(|_, w| w.afrl0().bits(1));
+                            gpioa.moder.modify(|_, w| w.moder0().bits(2));
+                        }
+                        Channel::_2 => {
+                            gpioa.afrl.modify(|_, w| w.afrl1().bits(1));
+                            gpioa.moder.modify(|_, w| w.moder1().bits(2));
+                        }
+                        Channel::_3 => {
+                            gpiob.afrh.modify(|_, w| unsafe {w.afrh10().bits(1)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder10().bits(2)});
+                        }
+                        Channel::_4 => {
+                            panic!("Not implemented: conflicts with USB USART2_RX");
+                        }
                     }
-                    });
                 } else if tim.get_type_id() == TypeId::of::<TIM3>() {
                     // CH1 = PA6 = alternate push-pull
                     // CH2 = PC7 = alternate push-pull
                     // CH3 = PB0 = alternate push-pull
                     // CH4 = PB1 = alternate push-pull
-                    gpioa.afrl.modify(|_, w| {
-                        w.afrl6().bits(2)
-                    });
-                    gpioa.moder.modify(|_, w| {
-                        w.moder6().bits(2)
-                    });
-                    gpiob.afrl.modify(|_, w| { unsafe {
-                        w.afrl0().bits(2)
-                        .afrl1().bits(2)
+                    match channel {
+                        Channel::_1 => {
+                            gpioa.afrl.modify(|_, w| w.afrl6().bits(2));
+                            gpioa.moder.modify(|_, w| w.moder6().bits(2));
                         }
-                    });
-                    gpiob.moder.modify(|_, w| { unsafe {
-                        w.moder0().bits(2)
-                        .moder1().bits(2)
+                        Channel::_2 => {
+                            gpioc.afrl.modify(|_, w|  unsafe {w.afrl7().bits(2)});
+                            gpioc.moder.modify(|_, w| unsafe {w.moder7().bits(2)});
                         }
-                    });
-                    gpioc.afrl.modify(|_, w| { unsafe {
-                        w.afrl7().bits(2)
+                        Channel::_3 => {
+                            gpiob.afrl.modify(|_, w| unsafe {w.afrl0().bits(2)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder0().bits(2)});
                         }
-                    });
-                    gpioc.moder.modify(|_, w| { unsafe {
-                        w.moder7().bits(2)
+                        Channel::_4 => {
+                            gpiob.afrl.modify(|_, w| unsafe {w.afrl1().bits(2)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder1().bits(2)});
                         }
-                    });
+                    }
 
                 } else if tim.get_type_id() == TypeId::of::<TIM4>() {
                     // CH1 = PB6 = alternate push-pull
                     // CH2 = PB7 = alternate push-pull
                     // CH3 = PB8 = alternate push-pull
                     // CH4 = PB9 = alternate push-pull
-                    gpiob.afrl.modify(|_, w| { unsafe {
-                        w.afrl6().bits(2)
-                        .afrl7().bits(2)
+                    match channel {
+                        Channel::_1 => {
+                            gpiob.afrl.modify(|_, w|  unsafe {w.afrl6().bits(2)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder6().bits(2)});
                         }
-                    });
-                    gpiob.moder.modify(|_, w| { unsafe {
-                        w.moder6().bits(2)
-                        .moder7().bits(2)
+                        Channel::_2 => {
+                            gpiob.afrl.modify(|_, w|  unsafe {w.afrl7().bits(2)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder7().bits(2)});
                         }
-                    });
-                    gpiob.afrh.modify(|_, w| { unsafe {
-                        w.afrh8().bits(2)
-                        .afrh9().bits(2)
+                        Channel::_3 => {
+                            gpiob.afrh.modify(|_, w|  unsafe {w.afrh8().bits(2)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder8().bits(2)});
                         }
-                    });
-                    gpiob.moder.modify(|_, w| { unsafe {
-                        w.moder8().bits(2)
-                        .moder9().bits(2)
+                        Channel::_4 => {
+                            gpiob.afrh.modify(|_, w|  unsafe {w.afrh9().bits(2)});
+                            gpiob.moder.modify(|_, w| unsafe {w.moder9().bits(2)});
                         }
-                    });
+                    }
                 }
 
                 // PWM mode 1
-                if tim.get_type_id() == TypeId::of::<TIM2>() {
-                    // Ignore conflicting pin for channel 4
-                    tim.ccmr1_output.modify(|_, w| unsafe {
-                        w.oc1pe()
-                            .set_bit()
-                            .oc1m()
-                            .bits(0b110)
-                            .oc2pe()
-                            .set_bit()
-                            .oc2m()
-                            .bits(0b110)
-                    });
-                    tim.ccmr2_output.modify(|_, w| unsafe {
-                        w.oc3pe()
-                            .set_bit()
-                            .oc3m()
-                            .bits(0b110)
-                    });
-                    tim.ccer
-                        .modify(|_, w| w.cc1p().clear_bit().cc2p().clear_bit().cc3p().clear_bit());
-                } else {
-                    tim.ccmr1_output.modify(|_, w| unsafe {
-                        w.oc1pe()
-                            .set_bit()
-                            .oc1m()
-                            .bits(0b110)
-                            .oc2pe()
-                            .set_bit()
-                            .oc2m()
-                            .bits(0b110)
-                    });
-
-                    tim.ccmr2_output.modify(|_, w| unsafe {
-                        w.oc3pe()
-                            .set_bit()
-                            .oc3m()
-                            .bits(0b110)
-                            .oc4pe()
-                            .set_bit()
-                            .oc4m()
-                            .bits(0b110)
-                    });
-
-                    tim.ccer.modify(|_, w| {
-                        w.cc1p()
-                            .clear_bit()
-                            .cc2p()
-                            .clear_bit()
-                            .cc3p()
-                            .clear_bit()
-                            .cc4p()
-                            .clear_bit()
-                    });
+                match channel {
+                    Channel::_1 => {
+                        tim.ccmr1_output.modify(|_, w| unsafe {w.oc1pe().set_bit().oc1m().bits(0b110)});
+                        tim.ccer.modify(|_, w| {w.cc1p().clear_bit()});
+                    }
+                    Channel::_2 => {
+                        tim.ccmr1_output.modify(|_, w| unsafe {w.oc2pe().set_bit().oc2m().bits(0b110)});
+                        tim.ccer.modify(|_, w| {w.cc2p().clear_bit()});
+                    }
+                    Channel::_3 => {
+                        tim.ccmr2_output.modify(|_, w| unsafe {w.oc3pe().set_bit().oc3m().bits(0b110)});
+                        tim.ccer.modify(|_, w| {w.cc3p().clear_bit()});
+                    }
+                    Channel::_4 => {
+                        if tim.get_type_id() == TypeId::of::<TIM2>() {
+                            panic!("Not implemented: conflicts with USB USART2_RX");
+                        }
+                        tim.ccmr2_output.modify(|_, w| unsafe {w.oc4pe().set_bit().oc4m().bits(0b110)});
+                        tim.ccer.modify(|_, w| {w.cc4p().clear_bit()});
+                    }
                 }
 
                 self._set_period(period);
@@ -514,7 +341,10 @@ macro_rules! impl_Pwm {
                 }
             }
         }
-
+    }
+}
+macro_rules! impl_halPwm {
+    ($TIM:ident, $APB:ident) => {
         impl<'a> hal::Pwm for Pwm<'a, $TIM>
         {
             type Channel = Channel;
@@ -585,6 +415,68 @@ macro_rules! impl_Pwm {
     }
 }
 
+impl_Pwm!(TIM1, apb2);
 impl_Pwm!(TIM2, apb1);
+impl_halPwm!(TIM2, apb1);
 impl_Pwm!(TIM3, apb1);
+impl_halPwm!(TIM3, apb1);
 impl_Pwm!(TIM4, apb1);
+impl_halPwm!(TIM4, apb1);
+
+// TIM1 is 16 bit instead of 32
+impl<'a> hal::Pwm for Pwm<'a, TIM1> {
+    type Channel = Channel;
+    type Time = ::apb2::Ticks;
+    type Duty = u16;
+
+    fn disable(&self, channel: Channel) {
+        match channel {
+            Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().clear_bit()),
+            Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().clear_bit()),
+            Channel::_3 => self.0.ccer.modify(|_, w| w.cc3e().clear_bit()),
+            Channel::_4 => self.0.ccer.modify(|_, w| w.cc4e().clear_bit()),
+        }
+    }
+
+    fn enable(&self, channel: Channel) {
+        match channel {
+            Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().set_bit()),
+            Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().set_bit()),
+            Channel::_3 => self.0.ccer.modify(|_, w| w.cc3e().set_bit()),
+            Channel::_4 => self.0.ccer.modify(|_, w| w.cc4e().set_bit()),
+        }
+    }
+
+    fn get_duty(&self, channel: Channel) -> u16 {
+        match channel {
+            Channel::_1 => self.0.ccr1.read().ccr1().bits(),
+            Channel::_2 => self.0.ccr2.read().ccr2().bits(),
+            Channel::_3 => self.0.ccr3.read().ccr3().bits(),
+            Channel::_4 => self.0.ccr4.read().ccr4().bits(),
+        }
+    }
+
+    fn get_max_duty(&self) -> u16 {
+        self.0.arr.read().arr().bits()
+    }
+
+    fn get_period(&self) -> ::apb2::Ticks {
+        ::apb2::Ticks(u32(self.0.psc.read().bits() * self.0.arr.read().bits()))
+    }
+
+    fn set_duty(&self, channel: Channel, duty: u16) {
+        match channel {
+            Channel::_1 => self.0.ccr1.write(|w| unsafe { w.ccr1().bits(duty) }),
+            Channel::_2 => self.0.ccr2.write(|w| unsafe { w.ccr2().bits(duty) }),
+            Channel::_3 => self.0.ccr3.write(|w| unsafe { w.ccr3().bits(duty) }),
+            Channel::_4 => self.0.ccr4.write(|w| unsafe { w.ccr4().bits(duty) }),
+        }
+    }
+
+    fn set_period<P>(&self, period: P)
+    where
+        P: Into<::apb2::Ticks>,
+    {
+        self._set_period(period.into())
+    }
+}

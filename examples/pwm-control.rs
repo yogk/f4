@@ -41,8 +41,16 @@ fn init(p: init::Peripherals) {
     serial.init(BAUD_RATE.invert(), None, p.GPIOA, p.RCC);
     serial.listen(Event::Rxne);
 
-    pwm.init(FREQUENCY.invert(), None, p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
-    pwm.set_duty(Channel::_1, 0);
+    pwm.init(
+        FREQUENCY.invert(),
+        Channel::_1,
+        None,
+        p.GPIOA,
+        p.GPIOB,
+        p.GPIOC,
+        p.RCC,
+    );
+    pwm.set_duty(Channel::_1, 1000);
 
     pwm.enable(Channel::_1);
 }
