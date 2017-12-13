@@ -43,6 +43,7 @@ pub mod timer;
 pub mod time;
 pub mod pwm;
 pub mod capture;
+pub mod clock;
 
 pub mod frequency;
 use frequency::*;
