@@ -244,7 +244,6 @@ macro_rules! impl_Pwm {
 
                     if tim.get_type_id() == TypeId::of::<TIM3>() {
                         // TIM3_CH4/UP
-                        // mem2mem: Memory to memory mode disabled
                         // pl: Medium priority
                         // msize: Memory size = 8 bits
                         // psize: Peripheral size = 16 bits
@@ -320,8 +319,7 @@ macro_rules! impl_Pwm {
 
                     let buffer: &[u8] = buffer.lock();
 
-                    dma1.s2ndtr
-                        .write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
+                    dma1.s2ndtr.write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
                     dma1.s2par.write(|w| unsafe {
                         match channel {
                             Channel::_1 => w.bits(&tim3.ccr1 as *const _ as u32),
@@ -330,8 +328,7 @@ macro_rules! impl_Pwm {
                             Channel::_4 => w.bits(&tim3.ccr4 as *const _ as u32),
                         }
                     });
-                    dma1.s2m0ar
-                        .write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
+                    dma1.s2m0ar.write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
                     dma1.s2cr.modify(|_, w| w.en().set_bit());
 
                     Ok(())

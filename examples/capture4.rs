@@ -22,12 +22,12 @@ app! {
     device: f4::stm32f40x,
 
     idle: {
-        resources: [ITM, TIM4],
+        resources: [ITM, TIM2],
     },
 }
 
 fn init(p: init::Peripherals) {
-    let capture = Capture(p.TIM4);
+    let capture = Capture(p.TIM2);
 
     for c in &CHANNELS {
         capture.init(RESOLUTION, *c, p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
@@ -36,7 +36,7 @@ fn init(p: init::Peripherals) {
 }
 
 fn idle(_t: &mut Threshold, r: idle::Resources) -> ! {
-    let capture = Capture(&*r.TIM4);
+    let capture = Capture(&*r.TIM2);
 
     loop {
         for c in &CHANNELS {

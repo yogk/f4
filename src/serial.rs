@@ -106,23 +106,29 @@ where
         if dma1.is_some() {
             rcc.ahb1enr.modify(|_, w| w.dma1en().set_bit());
         }
+        // RM0368 6.3.9
+        // enable clock to GPIOA, USART2
         if usart.get_type_id() == TypeId::of::<USART2>() {
             rcc.apb1enr.modify(|_, w| w.usart2en().set_bit());
+            rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
         }
+        // PA2. = TX, PA3 = RX
 
-        rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
-
+        // RM0368 8.4.1
+        // set output mode for GPIOA
+        // PA2 = TX (output mode), PA3 = RX (input mode)
         if usart.get_type_id() == TypeId::of::<USART2>() {
-            // PA2. = TX, PA3 = RX
+                // we don't care about the speed register atm
+            // DM00102166
+            // AF7, Table 9
+            // PA2 and PA3 is connected to USART2 TX and RX respectively
             gpio.afrl.modify(|_, w| w.afrl2().bits(7).afrl3().bits(7));
-            gpio.moder
-                .modify(|_, w| w.moder2().bits(2).moder3().bits(2));
+            gpio.moder.modify(|_, w| w.moder2().bits(2).moder3().bits(2));
         }
 
         if let Some(dma1) = dma1 {
             if usart.get_type_id() == TypeId::of::<USART2>() {
                 // TX DMA transfer
-                // mem2mem: Memory to memory mode disabled
                 // pl: Medium priority
                 // msize: Memory size = 8 bits
                 // psize: Peripheral size = 8 bits
@@ -154,7 +160,6 @@ where
                 });
 
                 // RX DMA transfer
-                // mem2mem: Memory to memory mode disabled
                 // pl: Medium priority
                 // msize: Memory size = 8 bits
                 // psize: Peripheral size = 8 bits
@@ -187,7 +192,7 @@ where
             }
         }
 
-        // 8N1
+        // 8N1, stop bit
         usart.cr2.write(|w| unsafe { w.stop().bits(0b00) });
 
         // baud rate

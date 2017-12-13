@@ -1,11 +1,15 @@
 //! Definition of bus frequency details for f4.
-
 macro_rules! frequency {
     ($FREQUENCY:expr) => {
         use time::*;
 
         /// Frequency
-        pub const FREQUENCY: u32 = $FREQUENCY;
+        static mut FREQUENCY: u32 = $FREQUENCY;
+
+        /// Set Frequency
+        pub fn set_frequency(f: u32) {
+            unsafe {FREQUENCY = f };
+        }
 
         /// Unit of time
         #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -22,43 +26,43 @@ macro_rules! frequency {
 
         impl From<Ticks> for Microseconds {
             fn from(ticks: Ticks) -> Self {
-                Microseconds(ticks.0 / (FREQUENCY / 1_000_000))
+                Microseconds(ticks.0 / (unsafe { FREQUENCY }/ 1_000_000))
             }
         }
 
         impl From<Ticks> for Milliseconds {
             fn from(ticks: Ticks) -> Self {
-                Milliseconds(ticks.0 / (FREQUENCY / 1_000))
+                Milliseconds(ticks.0 / (unsafe { FREQUENCY }/ 1_000))
             }
         }
 
         impl From<Ticks> for Seconds {
             fn from(ticks: Ticks) -> Self {
-                Seconds(ticks.0 / FREQUENCY)
+                Seconds(ticks.0 / unsafe { FREQUENCY })
             }
         }
 
         impl From<IHertz> for Ticks {
             fn from(ihz: IHertz) -> Ticks {
-                Ticks(FREQUENCY / ihz.0)
+                Ticks(unsafe { FREQUENCY } / ihz.0)
             }
         }
 
         impl From<Microseconds> for Ticks {
             fn from(us: Microseconds) -> Ticks {
-                Ticks(us.0 * (FREQUENCY / 1_000_000))
+                Ticks(us.0 * (unsafe { FREQUENCY } / 1_000_000))
             }
         }
 
         impl From<Milliseconds> for Ticks {
             fn from(ms: Milliseconds) -> Ticks {
-                Ticks(ms.0 * (FREQUENCY / 1_000))
+                Ticks(ms.0 * (unsafe { FREQUENCY } / 1_000))
             }
         }
 
         impl From<Seconds> for Ticks {
             fn from(s: Seconds) -> Ticks {
-                Ticks(s.0 * FREQUENCY)
+                Ticks(s.0 * unsafe { FREQUENCY })
             }
         }
 
@@ -70,8 +74,13 @@ macro_rules! frequency {
     }
 }
 
-/// Advance High-performance Bus (AHB)
-pub mod ahb {
+/// Advance High-performance Bus (AHB1)
+pub mod ahb1 {
+    frequency!(16_000_000);
+}
+
+/// Advance High-performance Bus (AHB2)
+pub mod ahb2 {
     frequency!(16_000_000);
 }
 

@@ -182,7 +182,7 @@ macro_rules! impl_Capture {
                             gpioa.moder.modify(|_, w| w.moder1().bits(2));
                         }
                         Channel::_3 => {
-                            gpiob.afrh.modify(|_, w| unsafe {w.afrh10().bits(1)});
+                            gpiob.afrh.modify(|_, w|  unsafe {w.afrh10().bits(1)});
                             gpiob.moder.modify(|_, w| unsafe {w.moder10().bits(2)});
                         }
                         Channel::_4 => {
@@ -204,11 +204,11 @@ macro_rules! impl_Capture {
                             gpioc.moder.modify(|_, w| unsafe {w.moder7().bits(2)});
                         }
                         Channel::_3 => {
-                            gpiob.afrl.modify(|_, w| unsafe {w.afrl0().bits(2)});
+                            gpiob.afrl.modify(|_, w|  unsafe {w.afrl0().bits(2)});
                             gpiob.moder.modify(|_, w| unsafe {w.moder0().bits(2)});
                         }
                         Channel::_4 => {
-                            gpiob.afrl.modify(|_, w| unsafe {w.afrl1().bits(2)});
+                            gpiob.afrl.modify(|_, w|  unsafe {w.afrl1().bits(2)});
                             gpiob.moder.modify(|_, w| unsafe {w.moder1().bits(2)});
                         }
                     }
@@ -239,55 +239,32 @@ macro_rules! impl_Capture {
                 }
 
                 tim.smcr.write(|w| unsafe {
-                    w.bits(3)
+                    w.bits(0)
                 });
                 // configure CC{1,2,3,4} as input and wire it to TI{1,2,3,4}
                 // apply the heaviest filter
                 tim.ccmr1_output.write(|w| unsafe {
                     w.bits((0b1111 << 12) | (0b01 << 8) | (0b1111 << 4) | (0b01 << 0))
                 });
-                // if tim.get_type_id() != TypeId::of::<TIM3>() {
-                // tim.ccmr2_output.write(|w| unsafe {
-                //     w.bits(0)
-                // });
-                // }
 
                 // enable capture on rising edge
                 // capture pins disabled by default
-                if tim.get_type_id() == TypeId::of::<TIM2>() {
-                    tim.ccer.modify(|_, w| {
-                        w.cc1p()
-                            .clear_bit()
-                            .cc1e()
-                            .clear_bit()
-                            .cc2p()
-                            .clear_bit()
-                            .cc2e()
-                            .clear_bit()
-                            .cc3p()
-                            .clear_bit()
-                            .cc3e()
-                            .clear_bit()
-                    });
-                } else {
-                    tim.ccer.modify(|_, w| {
-                        w.cc1p()
-                            .clear_bit()
-                            .cc1e()
-                            .clear_bit()
-                            .cc2p()
-                            .clear_bit()
-                            .cc2e()
-                            .clear_bit()
-                            .cc3p()
-                            .clear_bit()
-                            .cc3e()
-                            .clear_bit()
-                            .cc4p()
-                            .clear_bit()
-                            .cc4e()
-                            .clear_bit()
-                    });
+                match channel {
+                    Channel::_1 => {
+                        tim.ccer.modify(|_, w| {w.cc1p().clear_bit().cc1e().clear_bit()});
+                    }
+                    Channel::_2 => {
+                        tim.ccer.modify(|_, w| {w.cc2p().clear_bit().cc2e().clear_bit()});
+                    }
+                    Channel::_3 => {
+                        tim.ccer.modify(|_, w| {w.cc3p().clear_bit().cc3e().clear_bit()});
+                    }
+                    Channel::_4 => {
+                        if tim.get_type_id() == TypeId::of::<TIM2>() {
+                            panic!("Not implemented: conflicts with USB USART2_RX");
+                        }
+                        tim.ccer.modify(|_, w| {w.cc4p().clear_bit().cc4e().clear_bit()});
+                    }
                 }
 
                 self._set_resolution(resolution);

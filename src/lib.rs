@@ -52,3 +52,15 @@ pub use serial::Serial;
 pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
+
+/// println over semihosting
+#[macro_export]
+macro_rules! println {
+    ($($e:tt)*) => {
+        {
+            extern crate cortex_m_semihosting;
+            use core::fmt::Write;
+            writeln!(cortex_m_semihosting::hio::hstdout().unwrap(), $($e)*).unwrap();
+        }
+    }
+}

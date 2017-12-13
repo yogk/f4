@@ -18,7 +18,7 @@ app! {
 }
 
 fn init(p: init::Peripherals) {
-    let pwm = Pwm(p.TIM4);
+    let pwm = Pwm(p.TIM2);
 
     const CHANNELS: [Channel; 4] = [Channel::_1, Channel::_2, Channel::_3, Channel::_4];
 
