@@ -37,8 +37,6 @@ fn calculate_pll(m: u8, n: u16, p: u8) -> (u32, u32) {
     (pll_bitmask, pll_output)
 }
 
-
-
 /// Set system clock
 pub fn set(rcc: &RCC, flash: &FLASH, m: u8, n: u16, p: u8) -> u32 {
     let (pll_bitmask, sysclk) = calculate_pll(m, n, p);

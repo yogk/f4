@@ -118,17 +118,19 @@ where
         // set output mode for GPIOA
         // PA2 = TX (output mode), PA3 = RX (input mode)
         if usart.get_type_id() == TypeId::of::<USART2>() {
-                // we don't care about the speed register atm
+            // we don't care about the speed register atm
             // DM00102166
             // AF7, Table 9
             // PA2 and PA3 is connected to USART2 TX and RX respectively
             gpio.afrl.modify(|_, w| w.afrl2().bits(7).afrl3().bits(7));
-            gpio.moder.modify(|_, w| w.moder2().bits(2).moder3().bits(2));
+            gpio.moder
+                .modify(|_, w| w.moder2().bits(2).moder3().bits(2));
         }
 
         if let Some(dma1) = dma1 {
             if usart.get_type_id() == TypeId::of::<USART2>() {
                 // TX DMA transfer
+                // chsel: Channel 4 (RM0368 9.3.3 Table 27)
                 // pl: Medium priority
                 // msize: Memory size = 8 bits
                 // psize: Peripheral size = 8 bits
@@ -136,10 +138,12 @@ where
                 // pinc: Peripheral increment mode disabled
                 // circ: Circular mode disabled
                 // dir: Transfer from memory to peripheral
-                // tceie: Transfer complete interrupt enabled
+                // tcie: Transfer complete interrupt enabled
                 // en: Disabled
                 dma1.s6cr.write(|w| unsafe {
-                    w.pl()
+                    w.chsel()
+                        .bits(4)
+                        .pl()
                         .bits(0b01)
                         .msize()
                         .bits(0b00)
@@ -160,6 +164,7 @@ where
                 });
 
                 // RX DMA transfer
+                // chsel: Channel 4 (RM0368 9.3.3 Table 27)
                 // pl: Medium priority
                 // msize: Memory size = 8 bits
                 // psize: Peripheral size = 8 bits
@@ -167,10 +172,12 @@ where
                 // pinc: Peripheral increment mode disabled
                 // circ: Circular mode disabled
                 // dir: Transfer from peripheral to memory
-                // tceie: Transfer complete interrupt enabled
+                // tcie: Transfer complete interrupt enabled
                 // en: Disabled
                 dma1.s5cr.write(|w| unsafe {
-                    w.pl()
+                    w.chsel()
+                        .bits(4)
+                        .pl()
                         .bits(0b01)
                         .msize()
                         .bits(0b00)

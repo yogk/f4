@@ -14,21 +14,21 @@ pub fn init(gpioa: &GPIOA, rcc: &RCC) {
     rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
 
     // configure PA5 as output
-    gpioa.moder.modify(|_,w| w.moder5().bits(1));
+    gpioa.moder.modify(|_, w| w.moder5().bits(1));
 }
 
 impl PA5 {
     /// Turns the LED on
     pub fn on(&self) {
         unsafe {
-            (*GPIOA.get()).odr.modify(|_,w| w.odr5().bit(true));
+            (*GPIOA.get()).odr.modify(|_, w| w.odr5().bit(true));
         }
     }
 
     /// Turns the LED off
     pub fn off(&self) {
         unsafe {
-            (*GPIOA.get()).odr.modify(|_,w| w.odr5().bit(false));
+            (*GPIOA.get()).odr.modify(|_, w| w.odr5().bit(false));
         }
     }
 }

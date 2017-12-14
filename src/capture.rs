@@ -36,7 +36,7 @@
 use core::any::{Any, TypeId};
 use core::u32;
 
-use cast::{u32};
+use cast::u32;
 use hal;
 use nb;
 use stm32f40x::{TIM1, TIM2, TIM3, TIM4, GPIOA, GPIOB, GPIOC, RCC};

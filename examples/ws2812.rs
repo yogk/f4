@@ -7,8 +7,8 @@
 #![feature(proc_macro)]
 #![no_std]
 
-extern crate f4;
 extern crate cortex_m_rtfm as rtfm;
+extern crate f4;
 #[macro_use]
 extern crate nb;
 
@@ -38,7 +38,15 @@ app! {
 fn init(p: init::Peripherals, r: init::Resources) {
     let pwm = Pwm(p.TIM3);
 
-    pwm.init(FREQUENCY.invert(), Channel::_1, Some(p.DMA1), p.GPIOA, p.GPIOB, p.GPIOC, p.RCC);
+    pwm.init(
+        FREQUENCY.invert(),
+        Channel::_1,
+        Some(p.DMA1),
+        p.GPIOA,
+        p.GPIOB,
+        p.GPIOC,
+        p.RCC,
+    );
     pwm.enable(Channel::_1);
 
     // end of frame

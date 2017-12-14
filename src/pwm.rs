@@ -244,6 +244,7 @@ macro_rules! impl_Pwm {
 
                     if tim.get_type_id() == TypeId::of::<TIM3>() {
                         // TIM3_CH4/UP
+                        // chsel: Channel 5 (RM0368 9.3.3 Table 27)
                         // pl: Medium priority
                         // msize: Memory size = 8 bits
                         // psize: Peripheral size = 16 bits
@@ -254,7 +255,9 @@ macro_rules! impl_Pwm {
                         // tceie: Transfer complete interrupt enabled
                         // en: Disabled
                         dma1.s2cr.write(|w| unsafe {
-                            w.pl()
+                            w.chsel()
+                                .bits(5)
+                                .pl()
                                 .bits(0b01)
                                 .msize()
                                 .bits(0b00)
