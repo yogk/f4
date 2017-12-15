@@ -3,14 +3,17 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 #![feature(proc_macro)]
+#![feature(lang_items)]
 #![no_std]
 
 extern crate cortex_m_rtfm as rtfm;
 extern crate f4;
 extern crate heapless;
 
+use core::fmt::Write;
 use core::ops::Deref;
 use f4::Serial;
+use f4::Writer as w;
 use f4::prelude::*;
 use f4::dma::{Buffer, Dma1Channel5, Dma1Channel6};
 use f4::time::Hertz;
@@ -33,13 +36,14 @@ app! {
         static CMD_BUFFER: Vec<u8, [u8; MAX_CMD_LEN]> = Vec::new([0; MAX_CMD_LEN]);
         static RX_BUFFER: Buffer<[u8; MAX_RX_LEN], Dma1Channel5> = Buffer::new([0; MAX_RX_LEN]);
         static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Channel6> = Buffer::new([0; MAX_TX_LEN]);
+        static CNT: u8 = 1;
     },
 
     tasks: {
         DMA1_STREAM5: {
             path: rx_done,
             priority: 1,
-            resources: [CMD_BUFFER, RX_BUFFER, TX_BUFFER, DMA1, USART2],
+            resources: [CMD_BUFFER, RX_BUFFER, TX_BUFFER, DMA1, USART2, CNT],
         },
         DMA1_STREAM6: {
             path: tx_done,
@@ -48,15 +52,21 @@ app! {
         },
     },
 }
-
 fn init(p: init::Peripherals, r: init::Resources) {
     // There is no need to claim() resources in the init.
     // Start the serial port
     let serial = Serial(p.USART2);
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
-    // Send a welcome message. We can only clone slices of equal length, else panic.
-    r.TX_BUFFER.borrow_mut()[..15].clone_from_slice(b"Hello, world!\r\n");
+
+    // Send a welcome message by borrowing transmit buffer and writing a formatted string into it
+    let x = 1.0;
+    write!(
+        w::out(&mut r.TX_BUFFER.borrow_mut()[..MAX_TX_LEN]),
+        "Hello, world! {}\r\n",
+        x
+    ).unwrap();
     serial.write_all(p.DMA1, r.TX_BUFFER).unwrap();
+
     // Listen to serial input on the receive DMA
     serial.read_exact(p.DMA1, r.RX_BUFFER).unwrap();
 }
@@ -102,7 +112,7 @@ fn rx_done(t: &mut Threshold, mut r: DMA1_STREAM5::Resources) {
         if byte == b'\r' {
             // End of command
             match &***cmd {
-                b"hi" => {
+                b"hi" | b"Hi" => {
                     say_hello = true;
                 }
                 _ => {}
@@ -118,11 +128,18 @@ fn rx_done(t: &mut Threshold, mut r: DMA1_STREAM5::Resources) {
     });
     // If user wrote 'hi' and pressed enter, respond appropriately
     if say_hello {
+        // Increment 'hi' counter
+        **r.CNT = **r.CNT + 1;
+        let cnt: u8 = **r.CNT;
+        // Claim the transmit buffer and write a formatted string into it
         r.TX_BUFFER.claim_mut(t, |tx, _| {
-            let array = &**tx.deref();
-            // We can only clone slices of equal length, else panic
-            array.borrow_mut()[..15].clone_from_slice(b"Hello, there!\r\n");
+            write!(
+                w::out(&mut (*tx).deref().borrow_mut()[..MAX_TX_LEN]),
+                "Hello, there! {}\r\n",
+                cnt
+            ).unwrap();
         });
+
         // Transmit the response
         r.TX_BUFFER.claim(t, |tx, t| {
             r.DMA1.claim(t, |dma, t| {
@@ -132,6 +149,7 @@ fn rx_done(t: &mut Threshold, mut r: DMA1_STREAM5::Resources) {
                 });
             });
         });
+        // r.CNT.claim_mut(t, |cnt,_| cnt.wrapping_add(1));
     }
 }
 

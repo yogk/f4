@@ -21,6 +21,40 @@ use stm32f40x::{gpioa, DMA1, USART2, usart6, GPIOA, RCC};
 
 use dma::{self, Buffer, Dma1Channel5, Dma1Channel6};
 
+use core::fmt;
+use core::iter;
+
+///
+pub struct Writer<'a> {
+    buf: &'a mut [u8],
+    offset: usize,
+}
+
+impl<'a> Writer<'a> {
+    ///
+    pub fn out(buf: &'a mut [u8]) -> Self {
+        Writer {
+            buf: buf,
+            offset: 0,
+        }
+    }
+}
+
+impl<'a> fmt::Write for Writer<'a> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let bytes = s.as_bytes();
+        // Skip over already-copied data
+        let remainder = &mut self.buf[self.offset..];
+        // Make the two slices the same length
+        let remainder = &mut remainder[..bytes.len()];
+        // Copy
+        remainder.copy_from_slice(bytes);
+        // Increment offset by number of copied bytes
+        self.offset += bytes.len();
+        Ok(())
+    }
+}
+
 /// Specialized `Result` type
 pub type Result<T> = ::core::result::Result<T, nb::Error<Error>>;
 
