@@ -1,10 +1,9 @@
-// #![deny(unsafe_code)]
-// #![deny(warnings)]
+//! Set the clock frequency on the Nucleo-64 stm32f40x
+#![deny(warnings)]
 #![feature(proc_macro)]
 #![no_std]
 
 extern crate cortex_m_rtfm as rtfm;
-#[macro_use]
 extern crate f4;
 
 use rtfm::app;
@@ -18,7 +17,9 @@ app! {
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals) {
-    // RM0368 6.2.10
+    // See RM0368 6.2.10 Clock-out capability
+    // PC9 outputs SYSCLK/4 MHz and PA8 the frequency of the HSI RC
+
     // Configure PA8 as MCO_1 alternate function to output HSI clock
     p.RCC.ahb1enr.modify(|_, w| w.gpioaen().set_bit()); //Enable GPIOA clock
     p.GPIOA.ospeedr.modify(|_, w| w.ospeedr8().bits(0b11)); //Highest output speed
@@ -39,10 +40,17 @@ fn init(p: init::Peripherals) {
     p.RCC.cfgr.modify(|_, w| unsafe { w.mco2().bits(0b00) }); //MCO2 SYSCLK clock selected
     p.RCC.cfgr.modify(|_, w| unsafe { w.mco2pre().bits(0b110) }); //Divide SYSCLK by 4
 
-    let sysclk = clock::set_100_mhz(&p.RCC, &p.FLASH);
-    println!("SYSCLK set to {}", sysclk);
-    // PC9 should now output SYSCLK/4 MHz and PA8 the frequency of the HSI RC
+    // Set the clock to 84 MHz for compatibility with stm32f401
+    clock::set_84_mhz(&p.RCC, &p.FLASH);
+    
+    // The stm32f411 supports 100 MHz.
+    // clock::set_100_mhz(&p.RCC, &p.FLASH);
 
+    // We can also use a lower frequency by providing valid PLL constants.
+    // Since the HSI RC is 16 MHz, we get 16/8*50/4 = 25 MHz
+    // clock::set(&p.RCC, &p.FLASH, 8, 50, 4);
+
+    // Light the green LED when we start idling.
     led::init(&p.GPIOA, &p.RCC);
 }
 
