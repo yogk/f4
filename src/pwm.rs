@@ -14,7 +14,7 @@
 //! - CH1 = PA0
 //! - CH2 = PA1
 //! - CH3 = PB10
-//! - CH4 = PA3 (Not implemented: conflicts with USB USART2_RX)
+//! - CH4 = PA3 (Unimplemented: conflicts with USB USART2_RX)
 //!
 //! # TIM3
 //!
@@ -101,7 +101,7 @@ macro_rules! impl_Pwm {
                             Channel::_1 =>  w.gpioaen().set_bit(),
                             Channel::_2 =>  w.gpioaen().set_bit(),
                             Channel::_3 =>  w.gpioben().set_bit(),
-                            Channel::_4 =>  panic!("Not implemented: conflicts with USB USART2_RX"),
+                            Channel::_4 =>  unimplemented!()
                         }
                     } else if tim.get_type_id() == TypeId::of::<TIM3>() {
                         match channel {
@@ -162,7 +162,7 @@ macro_rules! impl_Pwm {
                             gpiob.moder.modify(|_, w| unsafe {w.moder10().bits(2)});
                         }
                         Channel::_4 => {
-                            panic!("Not implemented: conflicts with USB USART2_RX");
+                            unimplemented!()
                         }
                     }
                 } else if tim.get_type_id() == TypeId::of::<TIM3>() {
@@ -230,7 +230,7 @@ macro_rules! impl_Pwm {
                     }
                     Channel::_4 => {
                         if tim.get_type_id() == TypeId::of::<TIM2>() {
-                            panic!("Not implemented: conflicts with USB USART2_RX");
+                            unimplemented!()
                         }
                         tim.ccmr2_output.modify(|_, w| unsafe {w.oc4pe().set_bit().oc4m().bits(0b110)});
                         tim.ccer.modify(|_, w| {w.cc4p().clear_bit()});
@@ -240,6 +240,7 @@ macro_rules! impl_Pwm {
                 self._set_period(period);
 
                 if let Some(dma1) = dma1 {
+                    //  Update DMA request enable
                     tim.dier.modify(|_, w| w.ude().set_bit());
 
                     if tim.get_type_id() == TypeId::of::<TIM3>() {
@@ -252,7 +253,7 @@ macro_rules! impl_Pwm {
                         // pinc: Peripheral increment mode disabled
                         // circ: Circular mode disabled
                         // dir: Transfer from memory to peripheral
-                        // tceie: Transfer complete interrupt enabled
+                        // tcie: Transfer complete interrupt enabled
                         // en: Disabled
                         dma1.s2cr.write(|w| unsafe {
                             w.chsel()
@@ -265,12 +266,12 @@ macro_rules! impl_Pwm {
                                 .bits(0b01)
                                 .minc()
                                 .set_bit()
+                                .circ()
+                                .set_bit()
                                 .pinc()
                                 .clear_bit()
-                                .circ()
-                                .clear_bit()
                                 .dir()
-                                .bits(0)
+                                .bits(1)
                                 .tcie()
                                 .set_bit()
                                 .en()
