@@ -317,7 +317,7 @@ enum CircState {
     MutatingSecondHalf,
 }
 
-impl<B> CircBuffer<B, Dma1Channel1> {
+impl<B> CircBuffer<B, Dma1Channel5> {
     /// Constructs a circular buffer from two halves
     pub const fn new(buffer: [B; 2]) -> Self {
         CircBuffer {
