@@ -1,12 +1,12 @@
 [package]
-authors = ["Jorge Aparicio <jorge@japaric.io>"]
+authors = ["Johannes Sjölund <j.sjolund@gmail.com>", "Jorge Aparicio <jorge@japaric.io>", "Per Lindgren <per.lindgren@ltu.se>"]
 categories = ["asynchronous", "embedded", "hardware-support", "no-std"]
-description = "Board Support Crate for the STM32F3DISCOVERY"
+description = "Board Support Crate for the Nucleo-64 stm32f401x"
 documentation = "https://docs.rs/f3"
 keywords = ["arm", "cortex-m", "stm32"]
 license = "MIT OR Apache-2.0"
 name = "f4"
-repository = "https://github.com/japaric/f3"
+repository = "https://github.com/jsjolund/f4"
 version = "0.1.0"
 
 [dependencies]
