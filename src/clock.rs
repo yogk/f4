@@ -21,7 +21,7 @@ fn calculate_pll(m: u8, n: u16, p: u8) -> (u32, u32) {
         },
         _ => panic!("Invalid PLLN multiplier"),
     };
-    let log2p = match p {
+    let pval = match p {
         2 => 0b00,
         4 => 0b01,
         6 => 0b10,
@@ -32,7 +32,7 @@ fn calculate_pll(m: u8, n: u16, p: u8) -> (u32, u32) {
         24_000_000...100_000_000 => vco_clock / p as u32,
         _ => panic!("Invalid PLLP output frequency"),
     };
-    let pll_bitmask = ((log2p as u32) << 16) | ((n as u32) << 6) | (m as u32);
+    let pll_bitmask = ((pval as u32) << 16) | ((n as u32) << 6) | (m as u32);
 
     (pll_bitmask, pll_output)
 }
@@ -45,9 +45,12 @@ pub fn set(rcc: &RCC, flash: &FLASH, m: u8, n: u16, p: u8) -> u32 {
 
     // setting up the flash memory latency
     // RM0368 8.4.1 (register), 3.4 Table 6
-    // apb1 will be at 42 MHz
+    // apb1 will be at half system clock
     rcc.cfgr.modify(|_, w| unsafe { w.ppre1().bits(4) }); //Configure apb1 prescaler = 2,
     ::apb1::set_frequency(hclk / 2);
+    ::ahb1::set_frequency(hclk);
+    ::ahb2::set_frequency(hclk);
+    ::apb2::set_frequency(hclk);
 
     // we assume 3.3 volt operation, thus 2 cycles for 84MHz
     flash.acr.modify(|_, w| unsafe {

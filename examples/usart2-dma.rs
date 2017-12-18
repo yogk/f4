@@ -17,6 +17,7 @@ use f4::Writer as w;
 use f4::prelude::*;
 use f4::dma::{Buffer, Dma1Channel5, Dma1Channel6};
 use f4::time::Hertz;
+use f4::clock;
 use heapless::Vec;
 use rtfm::{app, Threshold};
 
@@ -52,7 +53,11 @@ app! {
         },
     },
 }
+
 fn init(p: init::Peripherals, r: init::Resources) {
+    // Set clock to higher than default in order to test it works
+    clock::set_84_mhz(&p.RCC, &p.FLASH);
+
     // There is no need to claim() resources in the init.
     // Start the serial port
     let serial = Serial(p.USART2);
@@ -98,8 +103,9 @@ fn rx_done(t: &mut Threshold, mut r: DMA1_STREAM5::Resources) {
             }
             if byte == b'\r' {
                 // If we got carrige return, send new line as well
-                if serial.write(b'\n').is_err() {
-                    rtfm::bkpt();
+                while serial.write(b'\n').is_err() {
+                    // Since we just transmitted carrige return,
+                    // we need to wait until tx line is free
                 }
             }
             // Get ready to receive again

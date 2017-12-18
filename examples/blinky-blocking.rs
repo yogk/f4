@@ -17,6 +17,7 @@ use f4::Timer;
 use f4::led::{self, LED};
 use f4::prelude::*;
 use f4::time::Hertz;
+use f4::clock;
 use rtfm::{app, Threshold};
 
 const FREQUENCY: Hertz = Hertz(1);
@@ -30,8 +31,10 @@ app! {
 }
 
 fn init(p: init::Peripherals) {
-    led::init(p.GPIOA, p.RCC);
+    // Set system clock in order to test that it works
+    clock::set_84_mhz(&p.RCC, &p.FLASH);
 
+    led::init(p.GPIOA, p.RCC);
     let timer = Timer(&*p.TIM11);
 
     timer.init(FREQUENCY.invert(), p.RCC);

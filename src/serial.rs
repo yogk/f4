@@ -22,7 +22,6 @@ use stm32f40x::{gpioa, DMA1, USART2, usart6, GPIOA, RCC};
 use dma::{self, Buffer, Dma1Channel5, Dma1Channel6};
 
 use core::fmt;
-use core::iter;
 
 ///
 pub struct Writer<'a> {
@@ -237,7 +236,15 @@ where
         usart.cr2.write(|w| unsafe { w.stop().bits(0b00) });
 
         // baud rate
-        let brr = baud_rate.into();
+        // Check if peripheral does not use default clock
+        let apb1psc = match rcc.cfgr.read().ppre1().bits() {
+            0b100 => 2,
+            0b101 => 4,
+            0b110 => 8,
+            0b111 => 16,
+            _ => 1,
+        };
+        let brr = baud_rate.into() / apb1psc;
         assert!(brr >= 16, "impossible baud rate");
         usart.brr.write(|w| unsafe { w.bits(brr) });
 
@@ -394,6 +401,7 @@ impl<'a> Serial<'a, USART2> {
     where
         B: Unsize<[u8]>,
     {
+        // write!(dma1, "hi {}", 1);
         let usart2 = self.0;
 
         if dma1.s6cr.read().en().bit_is_set() {
