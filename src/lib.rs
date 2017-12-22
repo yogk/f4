@@ -44,6 +44,7 @@ pub mod time;
 pub mod pwm;
 pub mod capture;
 pub mod clock;
+pub mod spi;
 
 pub mod frequency;
 use frequency::*;
@@ -54,6 +55,7 @@ pub use serial::U8Writer;
 pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
+pub use spi::Spi;
 
 /// println over semihosting
 #[macro_export]
