@@ -23,37 +23,6 @@ use dma::{self, Buffer, Dma1Channel5, Dma1Channel6};
 
 use core::fmt;
 
-///
-pub struct Writer<'a> {
-    buf: &'a mut [u8],
-    offset: usize,
-}
-
-impl<'a> Writer<'a> {
-    ///
-    pub fn out(buf: &'a mut [u8]) -> Self {
-        Writer {
-            buf: buf,
-            offset: 0,
-        }
-    }
-}
-
-impl<'a> fmt::Write for Writer<'a> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let bytes = s.as_bytes();
-        // Skip over already-copied data
-        let remainder = &mut self.buf[self.offset..];
-        // Make the two slices the same length
-        let remainder = &mut remainder[..bytes.len()];
-        // Copy
-        remainder.copy_from_slice(bytes);
-        // Increment offset by number of copied bytes
-        self.offset += bytes.len();
-        Ok(())
-    }
-}
-
 /// Specialized `Result` type
 pub type Result<T> = ::core::result::Result<T, nb::Error<Error>>;
 
@@ -153,9 +122,13 @@ where
         if usart.get_type_id() == TypeId::of::<USART2>() {
             // we don't care about the speed register atm
             // DM00102166
-            // AF7, Table 9
             // PA2 and PA3 is connected to USART2 TX and RX respectively
+            // Alternate function AF7, Table 9
             gpio.afrl.modify(|_, w| w.afrl2().bits(7).afrl3().bits(7));
+            // Highest output speed
+            gpio.ospeedr
+                .modify(|_, w| w.ospeedr2().bits(0b11).ospeedr3().bits(0b11));
+            // RM0368 8.3 Table 23
             gpio.moder
                 .modify(|_, w| w.moder2().bits(2).moder3().bits(2));
         }
@@ -322,7 +295,9 @@ where
         } else if sr.rxne().bit_is_set() {
             // NOTE(read_volatile) the register is 9 bits big but we'll only
             // work with the first 8 bits
-            Ok(unsafe { ptr::read_volatile(&usart2.dr as *const _ as *const u8) })
+            Ok(unsafe {
+                ptr::read_volatile(&usart2.dr as *const _ as *const u8)
+            })
         } else {
             Err(nb::Error::WouldBlock)
         }
@@ -419,5 +394,78 @@ impl<'a> Serial<'a, USART2> {
         dma1.s6cr.modify(|_, w| w.en().set_bit());
 
         Ok(())
+    }
+}
+///
+pub struct U8Writer<'a> {
+    buf: &'a mut [u8],
+    offset: usize,
+}
+
+impl<'a> U8Writer<'a> {
+    ///
+    pub fn new(buf: &'a mut [u8]) -> Self {
+       U8Writer {
+            buf: buf,
+            offset: 0,
+        }
+    }
+}
+
+impl<'a> fmt::Write for U8Writer<'a> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let bytes = s.as_bytes();
+        // Skip over already-copied data
+        let remainder = &mut self.buf[self.offset..];
+        // Make the two slices the same length
+        let remainder = &mut remainder[..bytes.len()];
+        // Copy
+        remainder.copy_from_slice(bytes);
+        // Increment offset by number of copied bytes
+        self.offset += bytes.len();
+        Ok(())
+    }
+}
+
+/// Macro for printing formatted strings over serial through DMA.
+/// Uses the corted-m-rtfm resource model and can thus not be used
+/// outside rtfm tasks.
+#[macro_export]
+macro_rules! uprint {
+    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr, $s:expr) => {
+        use core::fmt::Write;
+        // Claim the transmit buffer and write a string literal into it
+        $TX_BUFFER.claim_mut($T, |tx, _| {
+            let len = (*tx).deref().borrow().len();
+            let buf = &mut (*tx).deref().borrow_mut();
+            write!(U8Writer::new(&mut buf[..len]), $s).unwrap();
+        });
+        // Transmit the contents of the buffer using DMA
+        $TX_BUFFER.claim($T, |tx, t| {
+            $DMA.claim(t, |dma, t| {
+                $USART.claim(t, |usart, _| {
+                    let serial = Serial(&**usart);
+                    serial.write_all(dma, tx).unwrap();
+                });
+            });
+        });
+    };
+    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr, $($arg:tt)* ) => {
+        use core::fmt::Write;
+        // Claim the transmit buffer and write a formatted string into it
+        $TX_BUFFER.claim_mut($T, |tx, _| {
+            let len = (*tx).deref().borrow().len();
+            let buf = &mut (*tx).deref().borrow_mut();
+            write!(U8Writer::new(&mut buf[..len]), $($arg)*).unwrap();
+        });
+         // Transmit the contents of the buffer using DMA
+        $TX_BUFFER.claim($T, |tx, t| {
+            $DMA.claim(t, |dma, t| {
+                $USART.claim(t, |usart, _| {
+                    let serial = Serial(&**usart);
+                    serial.write_all(dma, tx).unwrap();
+                });
+            });
+        });
     }
 }

@@ -50,7 +50,7 @@ use frequency::*;
 
 pub use hal::prelude;
 pub use serial::Serial;
-pub use serial::Writer;
+pub use serial::U8Writer;
 pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
