@@ -45,8 +45,9 @@ pub mod pwm;
 pub mod capture;
 pub mod clock;
 pub mod spi;
-
+pub mod lsm9ds1;
 pub mod frequency;
+
 use frequency::*;
 
 pub use hal::prelude;
@@ -56,6 +57,7 @@ pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
 pub use spi::Spi;
+pub use lsm9ds1::{ImuSettings, Lsm9ds1, Vector3};
 
 /// println over semihosting
 #[macro_export]

@@ -82,11 +82,7 @@ fn disable_ag(gpioa: &mut GPIOA) {
 fn send_receive(spi: &f4::Spi<f4::stm32f40x::SPI3>, addr: u8) -> u8 {
     // Send and receive using the hal crate
     while spi.send(addr).is_err() {}
-    loop {
-        if let Ok(_) = spi.read() {
-            break;
-        }
-    }
+    while spi.read().is_err() {}
     while spi.send(0).is_err() {}
     loop {
         if let Ok(byte) = spi.read() {

@@ -31,4 +31,9 @@ impl PA5 {
             (*GPIOA.get()).odr.modify(|_, w| w.odr5().bit(false));
         }
     }
+
+    /// True if LED is ON, false otherwise.
+    pub fn is_on(&self) -> bool {
+        unsafe { (*GPIOA.get()).odr.read().odr5().bit_is_set() }
+    }
 }
