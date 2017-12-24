@@ -295,9 +295,7 @@ where
         } else if sr.rxne().bit_is_set() {
             // NOTE(read_volatile) the register is 9 bits big but we'll only
             // work with the first 8 bits
-            Ok(unsafe {
-                ptr::read_volatile(&usart2.dr as *const _ as *const u8)
-            })
+            Ok(unsafe { ptr::read_volatile(&usart2.dr as *const _ as *const u8) })
         } else {
             Err(nb::Error::WouldBlock)
         }
@@ -405,7 +403,7 @@ pub struct U8Writer<'a> {
 impl<'a> U8Writer<'a> {
     ///
     pub fn new(buf: &'a mut [u8]) -> Self {
-       U8Writer {
+        U8Writer {
             buf: buf,
             offset: 0,
         }
@@ -432,14 +430,7 @@ impl<'a> fmt::Write for U8Writer<'a> {
 /// outside rtfm tasks.
 #[macro_export]
 macro_rules! uprint {
-    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr, $s:expr) => {
-        use core::fmt::Write;
-        // Claim the transmit buffer and write a string literal into it
-        $TX_BUFFER.claim_mut($T, |tx, _| {
-            let len = (*tx).deref().borrow().len();
-            let buf = &mut (*tx).deref().borrow_mut();
-            write!(U8Writer::new(&mut buf[..len]), $s).unwrap();
-        });
+    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr) => {
         // Transmit the contents of the buffer using DMA
         $TX_BUFFER.claim($T, |tx, t| {
             $DMA.claim(t, |dma, t| {
@@ -450,22 +441,28 @@ macro_rules! uprint {
             });
         });
     };
-    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr, $($arg:tt)* ) => {
+    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr, $s:expr) => {
+        use rtfm::{Resource};
         use core::fmt::Write;
+        use f4::U8Writer;
+        // Claim the transmit buffer and write a string literal into it
+        $TX_BUFFER.claim_mut($T, |tx, _| {
+            let len = (*tx).deref().borrow().len();
+            let buf = &mut (*tx).deref().borrow_mut();
+            write!(U8Writer::new(&mut buf[..len]), $s).unwrap();
+        });
+        uprint!($T, $USART, $DMA, $TX_BUFFER);
+    };
+    ($T:ident, $USART:expr, $DMA:expr, $TX_BUFFER:expr, $($arg:tt)* ) => {
+        use rtfm::{Resource};
+        use core::fmt::Write;
+        use f4::U8Writer;
         // Claim the transmit buffer and write a formatted string into it
         $TX_BUFFER.claim_mut($T, |tx, _| {
             let len = (*tx).deref().borrow().len();
             let buf = &mut (*tx).deref().borrow_mut();
             write!(U8Writer::new(&mut buf[..len]), $($arg)*).unwrap();
         });
-         // Transmit the contents of the buffer using DMA
-        $TX_BUFFER.claim($T, |tx, t| {
-            $DMA.claim(t, |dma, t| {
-                $USART.claim(t, |usart, _| {
-                    let serial = Serial(&**usart);
-                    serial.write_all(dma, tx).unwrap();
-                });
-            });
-        });
-    }
+        uprint!($T, $USART, $DMA, $TX_BUFFER);
+    };
 }
