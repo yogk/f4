@@ -29,12 +29,13 @@ extern crate cast;
 extern crate embedded_hal as hal;
 extern crate nb;
 extern crate static_ref;
-
+extern crate m;
 pub extern crate stm32f40x;
 
 // For documentation only
 pub mod examples;
 
+pub mod math_utils;
 pub mod dma;
 pub mod led;
 pub mod leds;
@@ -47,9 +48,11 @@ pub mod clock;
 pub mod spi;
 pub mod lsm9ds1;
 pub mod frequency;
+pub mod madgwick_ahrs;
 
 use frequency::*;
 
+pub use math_utils::{Quaternion, Vector3};
 pub use hal::prelude;
 pub use serial::Serial;
 pub use serial::U8Writer;
@@ -57,7 +60,8 @@ pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
 pub use spi::Spi;
-pub use lsm9ds1::{ImuSettings, Lsm9ds1, Vector3};
+pub use lsm9ds1::{ImuSettings, Lsm9ds1};
+pub use madgwick_ahrs::MadgwickAhrs;
 
 /// println over semihosting
 #[macro_export]

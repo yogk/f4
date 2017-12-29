@@ -5,6 +5,7 @@ extern crate stm32f40x;
 use stm32f40x::{SPI1, SPI2, SPI3, GPIOA};
 use spi::Spi;
 use prelude::*;
+use math_utils::Vector3;
 
 /////////////////////////////////////////
 // Lsm9ds1 Accel/Gyro (XL/G) Registers //
@@ -204,15 +205,7 @@ pub struct ImuSettings {
     pub gyro: GyroSettings,
 }
 
-/// Generic 3D vector
-pub struct Vector3<T> {
-    /// X axis value
-    pub x: T,
-    /// Y axis value
-    pub y: T,
-    /// Z axis value
-    pub z: T,
-}
+
 
 /// Default settings for lsm9ds1
 impl ImuSettings {
@@ -222,7 +215,7 @@ impl ImuSettings {
             accel: AccelSettings {
                 enabled: true,
                 scale: 2,
-                sample_rate: 6,
+                sample_rate: 3,
                 enable_x: true,
                 enable_y: true,
                 enable_z: true,
@@ -233,7 +226,7 @@ impl ImuSettings {
             gyro: GyroSettings {
                 enabled: true,
                 scale: 245,
-                sample_rate: 6,
+                sample_rate: 3,
                 bandwidth: 0,
                 low_power_enable: false,
                 hpf_enable: false,
@@ -372,6 +365,26 @@ macro_rules! impl_Lsm9ds1 {
 
             fn m_write_byte(&self, spi: &Spi<$SPI>, gpioa: &GPIOA, addr: u8, data: u8) {
                 self.m_write_bytes(spi, gpioa, addr, [data; 128], 1);
+            }
+
+            /// Resets and reboots the accelerometer, gyro and magnetometer.
+            pub fn reset(&self, spi: &Spi<$SPI>, gpioa: &GPIOA) {
+                // Check that we can read from acc/gyro
+                assert_eq!(WHO_AM_I_AG_RSP, self.ag_read_byte(&spi, &gpioa, WHO_AM_I_XG));
+                self.ag_write_byte(&spi, &gpioa, CTRL_REG8, 0b10000001);
+                loop {
+                    if self.ag_read_byte(&spi, &gpioa, WHO_AM_I_XG) == WHO_AM_I_AG_RSP {
+                        break;
+                    }
+                }
+                // Check that we can read from mag
+                assert_eq!(WHO_AM_I_M_RSP, self.m_read_byte(&spi, &gpioa, WHO_AM_I_M));
+                self.m_write_byte(&spi, &gpioa, CTRL_REG2_M, 0b00001100);
+                loop {
+                    if self.m_read_byte(&spi, &gpioa, WHO_AM_I_M) == WHO_AM_I_M_RSP {
+                        break;
+                    }
+                }
             }
 
             /// Initalizes the gyroscope with given settings
