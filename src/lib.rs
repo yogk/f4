@@ -27,9 +27,9 @@
 
 extern crate cast;
 extern crate embedded_hal as hal;
+extern crate m;
 extern crate nb;
 extern crate static_ref;
-extern crate m;
 pub extern crate stm32f40x;
 
 // For documentation only

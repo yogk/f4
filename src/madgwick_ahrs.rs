@@ -15,7 +15,6 @@ pub struct MadgwickAhrs {
 
 ///
 impl MadgwickAhrs {
-
     /// Begin filtering with specified sample frequency in Hz
     pub const fn begin(sample_freq: f32) -> Self {
         MadgwickAhrs {
@@ -35,7 +34,6 @@ impl MadgwickAhrs {
         ay: f32,
         az: f32,
     ) -> Quaternion<f32> {
-
         let mut recip_norm: f32;
 
         let mut ax = ax;
@@ -46,11 +44,11 @@ impl MadgwickAhrs {
         let mut gy = gy;
         let mut gz = gz;
 
-	    // Convert gyroscope degrees/sec to radians/sec
+        // Convert gyroscope degrees/sec to radians/sec
         gx *= 0.0174533;
         gy *= 0.0174533;
         gz *= 0.0174533;
-        
+
         let q0 = self.q.x;
         let q1 = self.q.y;
         let q2 = self.q.z;
@@ -157,7 +155,7 @@ impl MadgwickAhrs {
         let mut my = my;
         let mut mz = mz;
 
-	    // Convert gyroscope degrees/sec to radians/sec
+        // Convert gyroscope degrees/sec to radians/sec
         gx *= 0.0174533;
         gy *= 0.0174533;
         gz *= 0.0174533;
@@ -175,7 +173,6 @@ impl MadgwickAhrs {
 
         // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
         if !((ax == 0.0) && (ay == 0.0) && (az == 0.0)) {
-
             // Normalise accelerometer measurement
             recip_norm = math_utils::fast_inv_sqrt(ax * ax + ay * ay + az * az);
             ax *= recip_norm;
@@ -266,7 +263,9 @@ impl MadgwickAhrs {
         self.q.w += q_dot4 * (1.0 / self.sample_freq);
 
         // Normalise quaternion
-        recip_norm = math_utils::fast_inv_sqrt(self.q.x * self.q.x + self.q.y * self.q.y + self.q.y * self.q.y + self.q.w * self.q.w);
+        recip_norm = math_utils::fast_inv_sqrt(
+            self.q.x * self.q.x + self.q.y * self.q.y + self.q.y * self.q.y + self.q.w * self.q.w,
+        );
         self.q.x *= recip_norm;
         self.q.y *= recip_norm;
         self.q.z *= recip_norm;

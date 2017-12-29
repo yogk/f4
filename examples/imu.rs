@@ -7,6 +7,10 @@
 //! PB_3 -> SCL              (SPI clock)
 //! PB_4 -> SDO_M and SDO_AG (Combined SPI MISO)
 //! PB_5 -> SDA              (SPI MOSI)
+//!
+//! The Madgwick AHRS filter is used to calculate board orientation from
+//! the IMU and output it though serial USB. The serial data can be read
+//! by the Processing script imu_visualizer for a 3D visualization.
 
 #![deny(unsafe_code)]
 // #![deny(warnings)]
@@ -87,14 +91,14 @@ fn sample_imu(_t: &mut Threshold, r: TIM2::Resources) {
     r.GYRO.set(imu.read_gyro(&spi, r.GPIOA, &r.IMU_SETTINGS));
     r.MAG.set(imu.read_mag(&spi, r.GPIOA, &r.IMU_SETTINGS));
     r.ORIENTATION.set(r.FILTER.madgwick_ahrs_update(
-        r.GYRO.x/2.0,
-        r.GYRO.y/2.0,
-        r.GYRO.z/2.0,
+        r.GYRO.x / 2.0,
+        r.GYRO.y / 2.0,
+        r.GYRO.z / 2.0,
         -r.ACC.x,
         -r.ACC.y,
         r.ACC.z,
-        r.MAG.x,
-        r.MAG.y,
+        -r.MAG.x,
+        -r.MAG.y,
         r.MAG.z,
     ));
 
@@ -133,7 +137,7 @@ fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
                 r.USART2,
                 r.DMA1,
                 r.TX_BUFFER,
-                "{} {} {}\r\n",
+                "{0: <12} {1: <12} {2: <12}\r\n",
                 a.x,
                 a.y,
                 a.z,
@@ -145,7 +149,7 @@ fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
                 r.USART2,
                 r.DMA1,
                 r.TX_BUFFER,
-                "{} {} {}\r\n",
+                "{0: <12} {1: <12} {2: <12}\r\n",
                 g.x,
                 g.y,
                 g.z,
@@ -157,7 +161,7 @@ fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
                 r.USART2,
                 r.DMA1,
                 r.TX_BUFFER,
-                "{} {} {}\r\n",
+                "{0: <12} {1: <12} {2: <12}\r\n",
                 m.x,
                 m.y,
                 m.z
