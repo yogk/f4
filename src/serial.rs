@@ -426,7 +426,7 @@ impl<'a> fmt::Write for U8Writer<'a> {
 }
 
 /// Macro for printing formatted strings over serial through DMA.
-/// Uses the corted-m-rtfm resource model and can thus not be used
+/// Uses the cortex-m-rtfm resource model and can thus not be used
 /// outside rtfm tasks.
 #[macro_export]
 macro_rules! uprint {
