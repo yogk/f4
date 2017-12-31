@@ -10,83 +10,83 @@ use math_utils::Vector3;
 /////////////////////////////////////////
 // Lsm9ds1 Accel/Gyro (XL/G) Registers //
 /////////////////////////////////////////
-const ACT_THS: u8 = 0x04;
-const ACT_DUR: u8 = 0x05;
-const INT_GEN_CFG_XL: u8 = 0x06;
-const INT_GEN_THS_X_XL: u8 = 0x07;
-const INT_GEN_THS_Y_XL: u8 = 0x08;
-const INT_GEN_THS_Z_XL: u8 = 0x09;
-const INT_GEN_DUR_XL: u8 = 0x0A;
-const REFERENCE_G: u8 = 0x0B;
-const INT1_CTRL: u8 = 0x0C;
-const INT2_CTRL: u8 = 0x0D;
+// const ACT_THS: u8 = 0x04;
+// const ACT_DUR: u8 = 0x05;
+// const INT_GEN_CFG_XL: u8 = 0x06;
+// const INT_GEN_THS_X_XL: u8 = 0x07;
+// const INT_GEN_THS_Y_XL: u8 = 0x08;
+// const INT_GEN_THS_Z_XL: u8 = 0x09;
+// const INT_GEN_DUR_XL: u8 = 0x0A;
+// const REFERENCE_G: u8 = 0x0B;
+// const INT1_CTRL: u8 = 0x0C;
+// const INT2_CTRL: u8 = 0x0D;
 const WHO_AM_I_XG: u8 = 0x0F;
 const CTRL_REG1_G: u8 = 0x10;
 const CTRL_REG2_G: u8 = 0x11;
 const CTRL_REG3_G: u8 = 0x12;
 const ORIENT_CFG_G: u8 = 0x13;
-const INT_GEN_SRC_G: u8 = 0x14;
-const OUT_TEMP_L: u8 = 0x15;
-const OUT_TEMP_H: u8 = 0x16;
-const STATUS_REG_0: u8 = 0x17;
+// const INT_GEN_SRC_G: u8 = 0x14;
+// const OUT_TEMP_L: u8 = 0x15;
+// const OUT_TEMP_H: u8 = 0x16;
+// const STATUS_REG_0: u8 = 0x17;
 const OUT_X_L_G: u8 = 0x18;
-const OUT_X_H_G: u8 = 0x19;
-const OUT_Y_L_G: u8 = 0x1A;
-const OUT_Y_H_G: u8 = 0x1B;
-const OUT_Z_L_G: u8 = 0x1C;
-const OUT_Z_H_G: u8 = 0x1D;
+// const OUT_X_H_G: u8 = 0x19;
+// const OUT_Y_L_G: u8 = 0x1A;
+// const OUT_Y_H_G: u8 = 0x1B;
+// const OUT_Z_L_G: u8 = 0x1C;
+// const OUT_Z_H_G: u8 = 0x1D;
 const CTRL_REG4: u8 = 0x1E;
 const CTRL_REG5_XL: u8 = 0x1F;
 const CTRL_REG6_XL: u8 = 0x20;
 const CTRL_REG7_XL: u8 = 0x21;
 const CTRL_REG8: u8 = 0x22;
-const CTRL_REG9: u8 = 0x23;
-const CTRL_REG10: u8 = 0x24;
-const INT_GEN_SRC_XL: u8 = 0x26;
-const STATUS_REG_1: u8 = 0x27;
+// const CTRL_REG9: u8 = 0x23;
+// const CTRL_REG10: u8 = 0x24;
+// const INT_GEN_SRC_XL: u8 = 0x26;
+// const STATUS_REG_1: u8 = 0x27;
 const OUT_X_L_XL: u8 = 0x28;
-const OUT_X_H_XL: u8 = 0x29;
-const OUT_Y_L_XL: u8 = 0x2A;
-const OUT_Y_H_XL: u8 = 0x2B;
-const OUT_Z_L_XL: u8 = 0x2C;
-const OUT_Z_H_XL: u8 = 0x2D;
-const FIFO_CTRL: u8 = 0x2E;
-const FIFO_SRC: u8 = 0x2F;
-const INT_GEN_CFG_G: u8 = 0x30;
-const INT_GEN_THS_XH_G: u8 = 0x31;
-const INT_GEN_THS_XL_G: u8 = 0x32;
-const INT_GEN_THS_YH_G: u8 = 0x33;
-const INT_GEN_THS_YL_G: u8 = 0x34;
-const INT_GEN_THS_ZH_G: u8 = 0x35;
-const INT_GEN_THS_ZL_G: u8 = 0x36;
-const INT_GEN_DUR_G: u8 = 0x37;
+// const OUT_X_H_XL: u8 = 0x29;
+// const OUT_Y_L_XL: u8 = 0x2A;
+// const OUT_Y_H_XL: u8 = 0x2B;
+// const OUT_Z_L_XL: u8 = 0x2C;
+// const OUT_Z_H_XL: u8 = 0x2D;
+// const FIFO_CTRL: u8 = 0x2E;
+// const FIFO_SRC: u8 = 0x2F;
+// const INT_GEN_CFG_G: u8 = 0x30;
+// const INT_GEN_THS_XH_G: u8 = 0x31;
+// const INT_GEN_THS_XL_G: u8 = 0x32;
+// const INT_GEN_THS_YH_G: u8 = 0x33;
+// const INT_GEN_THS_YL_G: u8 = 0x34;
+// const INT_GEN_THS_ZH_G: u8 = 0x35;
+// const INT_GEN_THS_ZL_G: u8 = 0x36;
+// const INT_GEN_DUR_G: u8 = 0x37;
 
 ///////////////////////////////
 // Lsm9ds1 Magneto Registers //
 ///////////////////////////////
-const OFFSET_X_REG_L_M: u8 = 0x05;
-const OFFSET_X_REG_H_M: u8 = 0x06;
-const OFFSET_Y_REG_L_M: u8 = 0x07;
-const OFFSET_Y_REG_H_M: u8 = 0x08;
-const OFFSET_Z_REG_L_M: u8 = 0x09;
-const OFFSET_Z_REG_H_M: u8 = 0x0A;
+// const OFFSET_X_REG_L_M: u8 = 0x05;
+// const OFFSET_X_REG_H_M: u8 = 0x06;
+// const OFFSET_Y_REG_L_M: u8 = 0x07;
+// const OFFSET_Y_REG_H_M: u8 = 0x08;
+// const OFFSET_Z_REG_L_M: u8 = 0x09;
+// const OFFSET_Z_REG_H_M: u8 = 0x0A;
 const WHO_AM_I_M: u8 = 0x0F;
 const CTRL_REG1_M: u8 = 0x20;
 const CTRL_REG2_M: u8 = 0x21;
 const CTRL_REG3_M: u8 = 0x22;
 const CTRL_REG4_M: u8 = 0x23;
 const CTRL_REG5_M: u8 = 0x24;
-const STATUS_REG_M: u8 = 0x27;
+// const STATUS_REG_M: u8 = 0x27;
 const OUT_X_L_M: u8 = 0x28;
-const OUT_X_H_M: u8 = 0x29;
-const OUT_Y_L_M: u8 = 0x2A;
-const OUT_Y_H_M: u8 = 0x2B;
-const OUT_Z_L_M: u8 = 0x2C;
-const OUT_Z_H_M: u8 = 0x2D;
-const INT_CFG_M: u8 = 0x30;
-const INT_SRC_M: u8 = 0x31;
-const INT_THS_L_M: u8 = 0x32;
-const INT_THS_H_M: u8 = 0x33;
+// const OUT_X_H_M: u8 = 0x29;
+// const OUT_Y_L_M: u8 = 0x2A;
+// const OUT_Y_H_M: u8 = 0x2B;
+// const OUT_Z_L_M: u8 = 0x2C;
+// const OUT_Z_H_M: u8 = 0x2D;
+// const INT_CFG_M: u8 = 0x30;
+// const INT_SRC_M: u8 = 0x31;
+// const INT_THS_L_M: u8 = 0x32;
+// const INT_THS_H_M: u8 = 0x33;
 
 ////////////////////////////////
 // Lsm9ds1 WHO_AM_I Responses //
@@ -263,7 +263,6 @@ const SENSITIVITY_MAGNETOMETER_4: f32 = 0.00014;
 const SENSITIVITY_MAGNETOMETER_8: f32 = 0.00029;
 const SENSITIVITY_MAGNETOMETER_12: f32 = 0.00043;
 const SENSITIVITY_MAGNETOMETER_16: f32 = 0.00058;
-
 
 /// LSM9DS1 for SPI communication
 pub struct Lsm9ds1<'a, T>(pub &'a T)

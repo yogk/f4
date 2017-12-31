@@ -23,7 +23,7 @@ void setup()
 
   // if you know the serial port name
   //myPort = new Serial(this, "COM5:", 115200);                    // Windows
-  myPort = new Serial(this, "/dev/ttyACM3", 115200);             // Linux
+  myPort = new Serial(this, "/dev/ttyACM0", 115200);             // Linux
   //myPort = new Serial(this, "/dev/cu.usbmodem1217321", 115200);  // Mac
 
   textSize(16); // set text size

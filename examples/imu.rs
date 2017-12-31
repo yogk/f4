@@ -110,32 +110,98 @@ app! {
     },
 }
 
+fn init(p: init::Peripherals, r: init::Resources) {
+    let clk = clock::set_84_mhz(&p.RCC, &p.FLASH);
+    p.SYST.set_clock_source(SystClkSource::Core);
+    p.SYST.set_reload(clk / SERIAL_FREQUENCY);
+    p.SYST.enable_interrupt();
+    p.SYST.enable_counter();
+
+    // Start the serial port
+    let serial = Serial(p.USART2);
+    serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
+
+    // Setup CS pins
+    {
+        // Power on GPIOA
+        p.RCC.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
+        // Set PA_8 and PA_9 as outputs
+        p.GPIOA
+            .moder
+            .modify(|_, w| w.moder8().bits(1).moder9().bits(1));
+        // Highest output speed
+        p.GPIOA
+            .ospeedr
+            .modify(|_, w| w.ospeedr8().bits(3).ospeedr9().bits(3));
+        // Default to high (CS disabled)
+        p.GPIOA
+            .odr
+            .modify(|_, w| w.odr8().bit(true).odr9().bit(true));
+    }
+
+    // Init the SPI peripheral
+    let spi = Spi(p.SPI3);
+    spi.init(p.GPIOA, p.GPIOB, p.RCC);
+
+    // For the LSM9DS1, the second clock transition is
+    // the first data capture edge
+    // RM0368 20.5.1
+    p.SPI3.cr1.modify(|_, w| w.cpha().set_bit());
+    spi.enable();
+
+    // Reset the IMU to a known state and initialize the sensors.
+    let imu = Lsm9ds1(p.SPI3);
+    imu.reset(&spi, &p.GPIOA);
+    imu.init_gyro(&spi, &p.GPIOA, &IMU_SETTINGS);
+    imu.init_acc(&spi, &p.GPIOA, &IMU_SETTINGS);
+    imu.init_mag(&spi, &p.GPIOA, &IMU_SETTINGS);
+
+    let timer = Timer(&*p.TIM2);
+    timer.init(Hertz(SAMPLE_FREQUENCY).invert(), p.RCC);
+    timer.resume();
+
+    // Listen to serial input on the receive DMA
+    serial.read_exact(p.DMA1, r.RX_BUFFER).unwrap();
+}
+
 fn sample_imu(_t: &mut Threshold, r: TIM2::Resources) {
     let spi = Spi(&**r.SPI3);
     let imu = Lsm9ds1(&**r.SPI3);
+
     // Read current acceleration in g
     r.ACC.set(imu.read_acc(&spi, r.GPIOA, &IMU_SETTINGS));
+
     // Read current angular velocity and convert to rad/s
     r.GYRO.set(
         imu.read_gyro(&spi, r.GPIOA, &IMU_SETTINGS)
             .scl(math_utils::DEG_TO_RAD),
     );
+
     // Read magnetic field strength in gauss
     r.MAG.set(imu.read_mag(&spi, r.GPIOA, &IMU_SETTINGS));
     // Account for magnetometer bias and scaling error
+    // Comment this out if performing calibration
     let mag = r.MAG.clone();
     r.MAG.set(mag.sub(MAG_BIAS).mul(MAG_SCL));
-    // Update the Madgwitck orientation filter
+
+    // Update the Madgwick orientation filter
     r.ORIENTATION.set(r.FILTER.madgwick_ahrs_update(
-        r.ACC.x,
-        r.ACC.y,
-        r.ACC.z,
-        -r.GYRO.x,
-        -r.GYRO.y,
-        -r.GYRO.z,
-        -r.MAG.x,
-        r.MAG.y,
-        r.MAG.z,
+        Vector3 {
+            x: r.ACC.x,
+            y: r.ACC.y,
+            z: r.ACC.z,
+        },
+        Vector3 {
+            x: -r.GYRO.x,
+            y: -r.GYRO.y,
+            z: -r.GYRO.z,
+        },
+        // Magnetometer is optional but improves drift around up axis
+        Some(Vector3 {
+            x: -r.MAG.x,
+            y: r.MAG.y,
+            z: r.MAG.z,
+        }),
     ));
     // Clear timer interrupt
     r.TIM2.sr.modify(|_, w| w.uif().clear_bit());
@@ -164,13 +230,13 @@ fn rx_done(t: &mut Threshold, r: DMA1_STREAM5::Resources) {
 
 fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
     use rtfm::Resource;
+    // Clone the IMU output and write it to serial port
     let a = r.ACC.claim(t, |v, _| **v.clone());
     let g = r.GYRO.claim(t, |v, _| **v.clone());
     let m = r.MAG.claim(t, |v, _| **v.clone());
-    let m = m.nor();
     let q = r.ORIENTATION.claim(t, |v, _| **v.clone());
     let e = q.to_euler_angles();
-
+    // Check what we should write
     let cmd = r.CMD.claim(t, |cmd, _| **cmd);
     match cmd as char {
         'a' => {
@@ -236,60 +302,6 @@ fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
         }
         _ => (),
     }
-}
-
-fn init(p: init::Peripherals, r: init::Resources) {
-    let clk = clock::set_84_mhz(&p.RCC, &p.FLASH);
-    p.SYST.set_clock_source(SystClkSource::Core);
-    p.SYST.set_reload(clk / SERIAL_FREQUENCY);
-    p.SYST.enable_interrupt();
-    p.SYST.enable_counter();
-
-    // Start the serial port
-    let serial = Serial(p.USART2);
-    serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
-
-    // Setup CS pins
-    {
-        // Power on GPIOA
-        p.RCC.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
-        // Set PA_8 and PA_9 as outputs
-        p.GPIOA
-            .moder
-            .modify(|_, w| w.moder8().bits(1).moder9().bits(1));
-        // Highest output speed
-        p.GPIOA
-            .ospeedr
-            .modify(|_, w| w.ospeedr8().bits(3).ospeedr9().bits(3));
-        // Default to high (CS disabled)
-        p.GPIOA
-            .odr
-            .modify(|_, w| w.odr8().bit(true).odr9().bit(true));
-    }
-
-    // Init the SPI peripheral
-    let spi = Spi(p.SPI3);
-    spi.init(p.GPIOA, p.GPIOB, p.RCC);
-
-    // For the LSM9DS1, the second clock transition is
-    // the first data capture edge
-    // RM0368 20.5.1
-    p.SPI3.cr1.modify(|_, w| w.cpha().set_bit());
-    spi.enable();
-
-    // Reset the IMU to a known state and initialize the sensors.
-    let imu = Lsm9ds1(p.SPI3);
-    imu.reset(&spi, &p.GPIOA);
-    imu.init_gyro(&spi, &p.GPIOA, &IMU_SETTINGS);
-    imu.init_acc(&spi, &p.GPIOA, &IMU_SETTINGS);
-    imu.init_mag(&spi, &p.GPIOA, &IMU_SETTINGS);
-
-    let timer = Timer(&*p.TIM2);
-    timer.init(Hertz(SAMPLE_FREQUENCY).invert(), p.RCC);
-    timer.resume();
-
-    // Listen to serial input on the receive DMA
-    serial.read_exact(p.DMA1, r.RX_BUFFER).unwrap();
 }
 
 // Interrupt for serial transmit DMA

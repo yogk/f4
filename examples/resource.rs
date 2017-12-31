@@ -67,7 +67,6 @@ fn init(p: init::Peripherals, _r: init::Resources) {
     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
     serial.listen(Event::Rxne);
 
-
     p.SYST.set_clock_source(SystClkSource::Core);
     p.SYST.set_reload(16_000_000 / DIVISOR);
     p.SYST.enable_interrupt();

@@ -21,7 +21,6 @@ use rtfm::{app, Threshold};
 const BAUD_RATE: Hertz = Hertz(115_200);
 const DIVISOR: u32 = 4;
 
-
 // TASKS & RESOURCES
 app! {
     device: f4::stm32f40x,

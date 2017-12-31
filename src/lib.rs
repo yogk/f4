@@ -16,7 +16,7 @@
 //! [examples]: ./examples/index.html
 
 #![deny(missing_docs)]
-// #![deny(warnings)]
+#![deny(warnings)]
 #![feature(const_fn)]
 #![feature(const_unsafe_cell_new)]
 #![feature(const_cell_new)]

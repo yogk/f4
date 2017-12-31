@@ -20,7 +20,6 @@ pub enum Channel {
     _4,
 }
 
-
 /// `hal::Timer` implementation
 pub struct Timer<'a, T>(pub &'a T)
 where

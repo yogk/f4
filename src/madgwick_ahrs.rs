@@ -1,7 +1,6 @@
 //! Rust implementation of Madgwick's IMU and AHRS algorithms.
 //! See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
 
-use math_utils;
 use math_utils::{Quaternion, Vector3};
 use m::Float as _0;
 
@@ -25,26 +24,7 @@ impl MadgwickAhrs {
     }
 
     /// The filter should be updated at the frequency specified in begin()
-    pub fn madgwick_ahrs_update_imu(
-        &mut self,
-        axi: f32,
-        ayi: f32,
-        azi: f32,
-        gxi: f32,
-        gyi: f32,
-        gzi: f32,
-    ) -> Quaternion<f32> {
-        let a: Vector3<f32> = Vector3 {
-            x: axi,
-            y: ayi,
-            z: azi,
-        };
-        let g: Vector3<f32> = Vector3 {
-            x: gxi,
-            y: gyi,
-            z: gzi,
-        };
-
+    fn madgwick_ahrs_update_imu(&mut self, a: Vector3<f32>, g: Vector3<f32>) -> Quaternion<f32> {
         let q = self.q;
 
         // Rate of change of quaternion from gyroscope
@@ -89,7 +69,6 @@ impl MadgwickAhrs {
         }
 
         // Integrate rate of change of quaternion to yield quaternion
-        // Normalise quaternion
         self.q.set(q.add(q_dot.scl(self.inv_sample_freq)).nor());
         self.q.clone()
     }
@@ -97,123 +76,98 @@ impl MadgwickAhrs {
     /// The filter should be updated at the frequency specified in begin()
     pub fn madgwick_ahrs_update(
         &mut self,
-        axi: f32,
-        ayi: f32,
-        azi: f32,
-        gxi: f32,
-        gyi: f32,
-        gzi: f32,
-        mxi: f32,
-        myi: f32,
-        mzi: f32,
+        a: Vector3<f32>,
+        g: Vector3<f32>,
+        m: Option<Vector3<f32>>,
     ) -> Quaternion<f32> {
-        // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
-        if (mxi == 0.0) && (myi == 0.0) && (mzi == 0.0) {
-            return self.madgwick_ahrs_update_imu(gxi, gyi, gzi, axi, ayi, azi);
-        }
+        if let Some(m) = m {
+            let q = self.q;
 
-        let a: Vector3<f32> = Vector3 {
-            x: axi,
-            y: ayi,
-            z: azi,
-        };
-        let g: Vector3<f32> = Vector3 {
-            x: gxi,
-            y: gyi,
-            z: gzi,
-        };
-        let m: Vector3<f32> = Vector3 {
-            x: mxi,
-            y: myi,
-            z: mzi,
-        };
-
-        let q = self.q;
-
-        // Rate of change of quaternion from gyroscope
-        let mut q_dot: Quaternion<f32> = Quaternion {
-            x: 0.5 * (-q.y * g.x - q.z * g.y - q.w * g.z),
-            y: 0.5 * (q.x * g.x + q.z * g.z - q.w * g.y),
-            z: 0.5 * (q.x * g.y - q.y * g.z + q.w * g.x),
-            w: 0.5 * (q.x * g.z + q.y * g.y - q.z * g.x),
-        };
-        // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-        if !((a.x == 0.0) && (a.y == 0.0) && (a.z == 0.0)) {
-            // Normalise accelerometer measurement
-            let a = a.nor();
-
-            // Normalise magnetometer measurement
-            let m = m.nor();
-
-            // Auxiliary variables to avoid repeated arithmetic
-            let _2qxmx = 2.0 * q.x * m.x;
-            let _2qxmy = 2.0 * q.x * m.y;
-            let _2qxmz = 2.0 * q.x * m.z;
-            let _2qymx = 2.0 * q.y * m.x;
-            let _2qx = 2.0 * q.x;
-            let _2qy = 2.0 * q.y;
-            let _2qz = 2.0 * q.z;
-            let _2qw = 2.0 * q.w;
-            let _2qxqz = 2.0 * q.x * q.z;
-            let _2qxqw = 2.0 * q.z * q.w;
-            let qxqx = q.x * q.x;
-            let qxqy = q.x * q.y;
-            let qxqz = q.x * q.z;
-            let qxqw = q.x * q.w;
-            let qyqy = q.y * q.y;
-            let qyqz = q.y * q.z;
-            let qyqw = q.y * q.w;
-            let qzqz = q.z * q.z;
-            let qzqw = q.z * q.w;
-            let qwqw = q.w * q.w;
-
-            // Reference direction of Earth's magnetic field
-            let hx = m.x * qxqx - _2qxmy * q.w + _2qxmz * q.z + m.x * qyqy + _2qy * m.y * q.z
-                + _2qy * m.z * q.w - m.x * qzqz - m.x * qwqw;
-            let hy = _2qxmx * q.w + m.y * qxqx - _2qxmz * q.y + _2qymx * q.z - m.y * qyqy
-                + m.y * qzqz + _2qz * m.z * q.w - m.y * qwqw;
-            let _2bx = (hx * hx + hy * hy).sqrt();
-            let _2bz = -_2qxmx * q.z + _2qxmy * q.y + m.z * qxqx + _2qymx * q.w - m.z * qyqy
-                + _2qz * m.y * q.w - m.z * qzqz + m.z * qwqw;
-            let _4bx = 2.0 * _2bx;
-            let _4bz = 2.0 * _2bz;
-
-            // Gradient decent algorithm corrective step
-            let s: Quaternion<f32> = Quaternion {
-                x: -_2qz * (2.0 * qyqw - _2qxqz - a.x) + _2qy * (2.0 * qxqy + _2qxqw - a.y)
-                    - _2bz * q.z * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
-                    + (-_2bx * q.w + _2bz * q.y)
-                        * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
-                    + _2bx * q.z * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
-                y: _2qw * (2.0 * qyqw - _2qxqz - a.x) + _2qx * (2.0 * qxqy + _2qxqw - a.y)
-                    - 4.0 * q.y * (1.0 - 2.0 * qyqy - 2.0 * qzqz - a.z)
-                    + _2bz * q.w * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
-                    + (_2bx * q.z + _2bz * q.x)
-                        * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
-                    + (_2bx * q.w - _4bz * q.y)
-                        * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
-                z: -_2qx * (2.0 * qyqw - _2qxqz - a.x) + _2qw * (2.0 * qxqy + _2qxqw - a.y)
-                    - 4.0 * q.z * (1.0 - 2.0 * qyqy - 2.0 * qzqz - a.z)
-                    + (-_4bx * q.z - _2bz * q.x)
-                        * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
-                    + (_2bx * q.y + _2bz * q.w)
-                        * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
-                    + (_2bx * q.x - _4bz * q.z)
-                        * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
-                w: _2qy * (2.0 * qyqw - _2qxqz - a.x) + _2qz * (2.0 * qxqy + _2qxqw - a.y)
-                    + (-_4bx * q.w + _2bz * q.y)
-                        * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
-                    + (-_2bx * q.x + _2bz * q.z)
-                        * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
-                    + _2bx * q.y * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
+            // Rate of change of quaternion from gyroscope
+            let mut q_dot: Quaternion<f32> = Quaternion {
+                x: 0.5 * (-q.y * g.x - q.z * g.y - q.w * g.z),
+                y: 0.5 * (q.x * g.x + q.z * g.z - q.w * g.y),
+                z: 0.5 * (q.x * g.y - q.y * g.z + q.w * g.x),
+                w: 0.5 * (q.x * g.z + q.y * g.y - q.z * g.x),
             };
-            // Apply feedback step
-            q_dot = q_dot.sub(s.nor().scl(self.beta));
-        }
+            // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
+            if !((a.x == 0.0) && (a.y == 0.0) && (a.z == 0.0)) {
+                // Normalise accelerometer and magnetometer measurement
+                let a = a.nor();
+                let m = m.nor();
 
-        // Integrate rate of change of quaternion to yield quaternion
-        // Normalise quaternion
-        self.q.set(q.add(q_dot.scl(self.inv_sample_freq)).nor());
-        self.q.clone()
+                // Auxiliary variables to avoid repeated arithmetic
+                let _2qxmx = 2.0 * q.x * m.x;
+                let _2qxmy = 2.0 * q.x * m.y;
+                let _2qxmz = 2.0 * q.x * m.z;
+                let _2qymx = 2.0 * q.y * m.x;
+                let _2qx = 2.0 * q.x;
+                let _2qy = 2.0 * q.y;
+                let _2qz = 2.0 * q.z;
+                let _2qw = 2.0 * q.w;
+                let _2qxqz = 2.0 * q.x * q.z;
+                let _2qxqw = 2.0 * q.z * q.w;
+                let qxqx = q.x * q.x;
+                let qxqy = q.x * q.y;
+                let qxqz = q.x * q.z;
+                let qxqw = q.x * q.w;
+                let qyqy = q.y * q.y;
+                let qyqz = q.y * q.z;
+                let qyqw = q.y * q.w;
+                let qzqz = q.z * q.z;
+                let qzqw = q.z * q.w;
+                let qwqw = q.w * q.w;
+
+                // Reference direction of Earth's magnetic field
+                let hx = m.x * qxqx - _2qxmy * q.w + _2qxmz * q.z + m.x * qyqy + _2qy * m.y * q.z
+                    + _2qy * m.z * q.w - m.x * qzqz - m.x * qwqw;
+                let hy = _2qxmx * q.w + m.y * qxqx - _2qxmz * q.y + _2qymx * q.z - m.y * qyqy
+                    + m.y * qzqz + _2qz * m.z * q.w - m.y * qwqw;
+                let _2bx = (hx * hx + hy * hy).sqrt();
+                let _2bz = -_2qxmx * q.z + _2qxmy * q.y + m.z * qxqx + _2qymx * q.w - m.z * qyqy
+                    + _2qz * m.y * q.w - m.z * qzqz + m.z * qwqw;
+                let _4bx = 2.0 * _2bx;
+                let _4bz = 2.0 * _2bz;
+
+                // Gradient decent algorithm corrective step
+                let s: Quaternion<f32> = Quaternion {
+                    x: -_2qz * (2.0 * qyqw - _2qxqz - a.x) + _2qy * (2.0 * qxqy + _2qxqw - a.y)
+                        - _2bz * q.z * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
+                        + (-_2bx * q.w + _2bz * q.y)
+                            * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
+                        + _2bx * q.z * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
+                    y: _2qw * (2.0 * qyqw - _2qxqz - a.x) + _2qx * (2.0 * qxqy + _2qxqw - a.y)
+                        - 4.0 * q.y * (1.0 - 2.0 * qyqy - 2.0 * qzqz - a.z)
+                        + _2bz * q.w * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
+                        + (_2bx * q.z + _2bz * q.x)
+                            * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
+                        + (_2bx * q.w - _4bz * q.y)
+                            * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
+                    z: -_2qx * (2.0 * qyqw - _2qxqz - a.x) + _2qw * (2.0 * qxqy + _2qxqw - a.y)
+                        - 4.0 * q.z * (1.0 - 2.0 * qyqy - 2.0 * qzqz - a.z)
+                        + (-_4bx * q.z - _2bz * q.x)
+                            * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
+                        + (_2bx * q.y + _2bz * q.w)
+                            * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
+                        + (_2bx * q.x - _4bz * q.z)
+                            * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
+                    w: _2qy * (2.0 * qyqw - _2qxqz - a.x) + _2qz * (2.0 * qxqy + _2qxqw - a.y)
+                        + (-_4bx * q.w + _2bz * q.y)
+                            * (_2bx * (0.5 - qzqz - qwqw) + _2bz * (qyqw - qxqz) - m.x)
+                        + (-_2bx * q.x + _2bz * q.z)
+                            * (_2bx * (qyqz - qxqw) + _2bz * (qxqy + qzqw) - m.y)
+                        + _2bx * q.y * (_2bx * (qxqz + qyqw) + _2bz * (0.5 - qyqy - qzqz) - m.z),
+                };
+                // Apply feedback step
+                q_dot = q_dot.sub(s.nor().scl(self.beta));
+            }
+
+            // Integrate rate of change of quaternion to yield quaternion
+            self.q.set(q.add(q_dot.scl(self.inv_sample_freq)).nor());
+            self.q.clone()
+        } else {
+            // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
+            return self.madgwick_ahrs_update_imu(a, g);
+        }
     }
 }
