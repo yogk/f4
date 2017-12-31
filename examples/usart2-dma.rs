@@ -108,6 +108,7 @@ fn rx_done(t: &mut Threshold, mut r: DMA1_STREAM5::Resources) {
             };
             cmd.clear();
         } else {
+            // Append character to buffer
             if cmd.push(byte).is_err() {
                 // Error: command buffer is full
                 cmd.clear();
