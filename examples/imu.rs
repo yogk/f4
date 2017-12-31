@@ -10,10 +10,24 @@
 //!
 //! The Madgwick AHRS filter is used to calculate board orientation from
 //! the IMU and output it though serial USB. The serial data can be read
-//! by the Processing script imu_visualizer for a 3D visualization.
+//! by the Processing script imu_visualizer.pde for a 3D visualization.
+//!
+//! If connected to a terminal emulator, the following keys can be pressed
+//! a: Display acceleration in g
+//! g: Angular velocity in dps
+//! m: Magnetic field strengths in gauss
+//! e: Orientation in euler angles
+//! q: Orientation as a quaternion
+//!
+//! In order to improve orientation tracking, the bias and scaling error
+//! of the magnetometer must be accounted for. To measure it, remove the
+//! correction from this program. Set the terminal to output magnetic
+//! field strength (m), close the terminal and connect to the Nucleo
+//! through the Processing script mag_calibration.pde. Move the IMU in a
+//! figure eight with one hand and read the calculated bias and scaling errors.
 
 #![deny(unsafe_code)]
-// #![deny(warnings)]
+#![deny(warnings)]
 #![feature(const_fn)]
 #![feature(proc_macro)]
 #![feature(lang_items)]
@@ -36,14 +50,27 @@ use f4::time::Hertz;
 use f4::clock;
 use f4::timer::Timer;
 use f4::prelude::*;
+use f4::math_utils;
 use f4::math_utils::{Quaternion, Vector3};
 use f4::madgwick_ahrs::MadgwickAhrs;
 use rtfm::{app, Threshold};
 
 const BAUD_RATE: Hertz = Hertz(115_200);
 const SAMPLE_FREQUENCY: u32 = 100;
-const SERIAL_FREQUENCY: u32 = 10;
+const SERIAL_FREQUENCY: u32 = 30;
 const MAX_TX_LEN: usize = 256;
+const IMU_SETTINGS: ImuSettings = ImuSettings::new();
+
+const MAG_BIAS: Vector3<f32> = Vector3 {
+    x: 0.31440094,
+    y: 0.05669275,
+    z: -0.2606601,
+};
+const MAG_SCL: Vector3<f32> = Vector3 {
+    x: 1.1383637,
+    y: 0.8517405,
+    z: 1.0554318,
+};
 
 app! {
     device: f4::stm32f40x,
@@ -53,7 +80,6 @@ app! {
         static GYRO: Vector3<f32> = Vector3::<f32>::new();
         static MAG: Vector3<f32> = Vector3::<f32>::new();
         static ORIENTATION: Quaternion<f32> = Quaternion::<f32>::new();
-        static IMU_SETTINGS: ImuSettings = ImuSettings::new();
         static FILTER: MadgwickAhrs = MadgwickAhrs::begin(SAMPLE_FREQUENCY as f32);
         static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Channel6> = Buffer::new([0; MAX_TX_LEN]);
         static RX_BUFFER: Buffer<[u8; 1], Dma1Channel5> = Buffer::new([0; 1]);
@@ -79,7 +105,7 @@ app! {
         TIM2: {
             path: sample_imu,
             priority: 3,
-            resources: [ACC, GYRO, MAG, ORIENTATION, IMU_SETTINGS, FILTER, SPI3, GPIOA, TIM2],
+            resources: [ACC, GYRO, MAG, ORIENTATION, FILTER, SPI3, GPIOA, TIM2],
         },
     },
 }
@@ -87,23 +113,34 @@ app! {
 fn sample_imu(_t: &mut Threshold, r: TIM2::Resources) {
     let spi = Spi(&**r.SPI3);
     let imu = Lsm9ds1(&**r.SPI3);
-    r.ACC.set(imu.read_acc(&spi, r.GPIOA, &r.IMU_SETTINGS));
-    r.GYRO.set(imu.read_gyro(&spi, r.GPIOA, &r.IMU_SETTINGS));
-    r.MAG.set(imu.read_mag(&spi, r.GPIOA, &r.IMU_SETTINGS));
+    // Read current acceleration in g
+    r.ACC.set(imu.read_acc(&spi, r.GPIOA, &IMU_SETTINGS));
+    // Read current angular velocity and convert to rad/s
+    r.GYRO.set(
+        imu.read_gyro(&spi, r.GPIOA, &IMU_SETTINGS)
+            .scl(math_utils::DEG_TO_RAD),
+    );
+    // Read magnetic field strength in gauss
+    r.MAG.set(imu.read_mag(&spi, r.GPIOA, &IMU_SETTINGS));
+    // Account for magnetometer bias and scaling error
+    let mag = r.MAG.clone();
+    r.MAG.set(mag.sub(MAG_BIAS).mul(MAG_SCL));
+    // Update the Madgwitck orientation filter
     r.ORIENTATION.set(r.FILTER.madgwick_ahrs_update(
-        r.GYRO.x / 2.0,
-        r.GYRO.y / 2.0,
-        r.GYRO.z / 2.0,
-        -r.ACC.x,
-        -r.ACC.y,
+        r.ACC.x,
+        r.ACC.y,
         r.ACC.z,
+        -r.GYRO.x,
+        -r.GYRO.y,
+        -r.GYRO.z,
         -r.MAG.x,
-        -r.MAG.y,
+        r.MAG.y,
         r.MAG.z,
     ));
-
+    // Clear timer interrupt
     r.TIM2.sr.modify(|_, w| w.uif().clear_bit());
 }
+
 fn rx_done(t: &mut Threshold, r: DMA1_STREAM5::Resources) {
     use rtfm::Resource;
     **r.CMD = r.RX_BUFFER.claim(t, |rx, t| {
@@ -117,7 +154,11 @@ fn rx_done(t: &mut Threshold, r: DMA1_STREAM5::Resources) {
             r.DMA1
                 .claim(t, |dma, _| serial.read_exact(dma, rx).unwrap());
         });
-        byte
+        // Filter out garbage data
+        match byte as char {
+            'a' | 'g' | 'm' | 'e' | 'q' => byte,
+            _ => **r.CMD,
+        }
     })
 }
 
@@ -126,48 +167,49 @@ fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
     let a = r.ACC.claim(t, |v, _| **v.clone());
     let g = r.GYRO.claim(t, |v, _| **v.clone());
     let m = r.MAG.claim(t, |v, _| **v.clone());
+    let m = m.nor();
     let q = r.ORIENTATION.claim(t, |v, _| **v.clone());
     let e = q.to_euler_angles();
 
     let cmd = r.CMD.claim(t, |cmd, _| **cmd);
-    match cmd {
-        b'a' => {
+    match cmd as char {
+        'a' => {
             uprint!(
                 t,
                 r.USART2,
                 r.DMA1,
                 r.TX_BUFFER,
-                "{0: <12} {1: <12} {2: <12}\r\n",
+                "{} {} {}\r\n",
                 a.x,
                 a.y,
                 a.z,
             );
         }
-        b'g' => {
+        'g' => {
             uprint!(
                 t,
                 r.USART2,
                 r.DMA1,
                 r.TX_BUFFER,
-                "{0: <12} {1: <12} {2: <12}\r\n",
+                "{} {} {}\r\n",
                 g.x,
                 g.y,
                 g.z,
             );
         }
-        b'm' => {
+        'm' => {
             uprint!(
                 t,
                 r.USART2,
                 r.DMA1,
                 r.TX_BUFFER,
-                "{0: <12} {1: <12} {2: <12}\r\n",
+                "{} {} {}\r\n",
                 m.x,
                 m.y,
                 m.z
             );
         }
-        b'e' => {
+        'e' => {
             uprint!(
                 t,
                 r.USART2,
@@ -179,7 +221,7 @@ fn sys_tick(t: &mut Threshold, mut r: SYS_TICK::Resources) {
                 e.z
             );
         }
-        b'q' => {
+        'q' => {
             uprint!(
                 t,
                 r.USART2,
@@ -238,9 +280,9 @@ fn init(p: init::Peripherals, r: init::Resources) {
     // Reset the IMU to a known state and initialize the sensors.
     let imu = Lsm9ds1(p.SPI3);
     imu.reset(&spi, &p.GPIOA);
-    imu.init_gyro(&spi, &p.GPIOA, &r.IMU_SETTINGS);
-    imu.init_acc(&spi, &p.GPIOA, &r.IMU_SETTINGS);
-    imu.init_mag(&spi, &p.GPIOA, &r.IMU_SETTINGS);
+    imu.init_gyro(&spi, &p.GPIOA, &IMU_SETTINGS);
+    imu.init_acc(&spi, &p.GPIOA, &IMU_SETTINGS);
+    imu.init_mag(&spi, &p.GPIOA, &IMU_SETTINGS);
 
     let timer = Timer(&*p.TIM2);
     timer.init(Hertz(SAMPLE_FREQUENCY).invert(), p.RCC);

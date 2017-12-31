@@ -205,8 +205,6 @@ pub struct ImuSettings {
     pub gyro: GyroSettings,
 }
 
-
-
 /// Default settings for lsm9ds1
 impl ImuSettings {
     ///
@@ -225,7 +223,7 @@ impl ImuSettings {
             },
             gyro: GyroSettings {
                 enabled: true,
-                scale: 245,
+                scale: 500,
                 sample_rate: 3,
                 bandwidth: 0,
                 low_power_enable: false,
@@ -245,8 +243,8 @@ impl ImuSettings {
                 scale: 4,
                 sample_rate: 7,
                 temp_compensation_enable: false,
-                xy_performance: 3,
-                z_performance: 3,
+                xy_performance: 1,
+                z_performance: 1,
                 low_power_enable: false,
                 operating_mode: 0,
             },
@@ -496,7 +494,7 @@ macro_rules! impl_Lsm9ds1 {
                     500 => SENSITIVITY_GYROSCOPE_500,
                     2000 => SENSITIVITY_GYROSCOPE_2000,
                     _ => panic!("Invalid sensitivity")
-                };
+                } / 2.0;
                 let g_raw = self.read_gyro_raw(&spi, &gpioa);
                 Vector3 {
                     x:g_raw.x as f32 * g_res,
@@ -653,7 +651,7 @@ macro_rules! impl_Lsm9ds1 {
                 // [0][0][0][0][OMZ1][OMZ0][BLE][0]
                 // OMZ[1:0] - Z-axis operative mode selection
                 //	00:low-power mode, 01:medium performance
-                //	10:high performance, 10:ultra-high performance
+                //	10:high performance, 11:ultra-high performance
                 // BLE - Big/little endian data
                 temp = (settings.mag.z_performance & 0x3) << 2;
                 self.m_write_byte(&spi, &gpioa, CTRL_REG4_M, temp);

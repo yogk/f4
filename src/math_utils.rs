@@ -5,6 +5,8 @@ use m::Float as _0;
 
 /// Convert radians to degrees by multiplying with this number
 pub const RAD_TO_DEG: f32 = 57.29578;
+/// Convert degrees to radians by multiplying with this number
+pub const DEG_TO_RAD: f32 = 0.0174533;
 
 /// Generic 4D vector
 #[derive(Clone, Copy, Debug)]
@@ -67,6 +69,52 @@ impl Quaternion<f32> {
             z: yaw * RAD_TO_DEG,
         }
     }
+
+    /// The squared length
+    pub fn len2(&self) -> f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
+    }
+
+    /// Normalize
+    pub fn nor(&self) -> Quaternion<f32> {
+        let recip_norm = fast_inv_sqrt(self.len2());
+        Quaternion {
+            x: self.x * recip_norm,
+            y: self.y * recip_norm,
+            z: self.z * recip_norm,
+            w: self.w * recip_norm,
+        }
+    }
+
+    /// Add another quaternion to this one
+    pub fn add(&self, other: Quaternion<f32>) -> Quaternion<f32> {
+        Quaternion {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+            w: self.w + other.w,
+        }
+    }
+
+    /// Subtract another quaternion to this one
+    pub fn sub(&self, other: Quaternion<f32>) -> Quaternion<f32> {
+        Quaternion {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+            w: self.w - other.w,
+        }
+    }
+
+    /// Scale
+    pub fn scl(&self, s: f32) -> Quaternion<f32> {
+        Quaternion {
+            x: self.x * s,
+            y: self.y * s,
+            z: self.z * s,
+            w: self.w * s,
+        }
+    }
 }
 
 /// Generic 3D vector
@@ -93,9 +141,56 @@ impl Vector3<f32> {
     /// Creates a new normalized vector
     pub const fn new() -> Self {
         Vector3 {
-            x: 1.0,
+            x: 0.0,
             y: 0.0,
             z: 0.0,
+        }
+    }
+
+    /// The squared length
+    pub fn len2(&self) -> f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+
+    /// Normalize
+    pub fn nor(&self) -> Vector3<f32> {
+        let recip_norm = fast_inv_sqrt(self.len2());
+        self.scl(recip_norm)
+    }
+
+    /// Scale
+    pub fn scl(&self, s: f32) -> Vector3<f32> {
+        Vector3 {
+            x: self.x * s,
+            y: self.y * s,
+            z: self.z * s,
+        }
+    }
+
+    /// Add another vector to this one
+    pub fn add(&self, other: Vector3<f32>) -> Vector3<f32> {
+        Vector3 {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
+    }
+
+    /// Subtract another vector to this one
+    pub fn sub(&self, other: Vector3<f32>) -> Vector3<f32> {
+        Vector3 {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+        }
+    }
+
+    /// Multiply by a block diagonal matrix in which the diagonals are equal to the other vector
+    pub fn mul(&self, other: Vector3<f32>) -> Vector3<f32> {
+        Vector3 {
+            x: self.x * other.x,
+            y: self.y * other.y,
+            z: self.z * other.z,
         }
     }
 }

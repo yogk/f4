@@ -77,7 +77,7 @@ void serialEvent()
         pitch = float(list[2]); // convert to float pitch
         roll = float(list[3]); // convert to float roll
 
-      } else if (list.length >= 4 && list[0].equals("Quaternion:")) {
+      } else if (list.length >= 5 && list[0].equals("Quaternion:")) {
         float q0 = float(list[1]);
         float q1 = float(list[2]);
         float q2 = float(list[3]);
