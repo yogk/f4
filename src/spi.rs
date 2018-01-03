@@ -205,7 +205,8 @@ macro_rules! impl_Spi {
                     gpiob.otyper.modify(|_, w|
                         w.ot3().clear_bit()
                         .ot4().set_bit()
-                        .ot5().clear_bit());
+                        .ot5().clear_bit()
+                    );
                     // No pull up/down except MISO
                     gpioa.pupdr.modify(|_, w|unsafe {
                         w.pupdr15().bits(0)});

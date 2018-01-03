@@ -42,26 +42,18 @@ impl Quaternion<f32> {
         }
     }
 
-    /// Calculate the euler angles from the quaternion. TODO
+    /// Calculate the euler angles from the quaternion.
     pub fn to_euler_angles(&self) -> Vector3<f32> {
         let q0 = self.x;
         let q1 = self.y;
         let q2 = self.z;
         let q3 = self.w;
 
-        let x = 2.0 * (q1 * q3 - q0 * q2);
-        let y = 2.0 * (q0 * q1 + q2 * q3);
-        let z = q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3;
-        let pitch = x.atan2((y * y + z * z).sqrt());
-        let yaw = y.atan2((x * x + z * z).sqrt());
-        let roll = (2.0 * q1 * q2 - 2.0 * q0 * q3).atan2(2.0 * q0 * q0 + 2.0 * q1 * q1 - 1.0);
-
-        // let roll: f32 = (q0 * q1 + q2 * q3).atan2(0.5 - q1 * q1 - q2 * q2);
-        // // let pitch = asinf(-2.0 * (q1 * q3 - q0 * q2));
-        // let y = -2.0 * (q1 * q3 - q0 * q2);
-        // let x = 1.0 + (1.0 - y * y).sqrt();
-        // let pitch = 2.0 * y.atan2(x);
-        // let yaw: f32 = (q1 * q2 + q0 * q3).atan2(0.5 - q2 * q2 - q3 * q3);
+        let yaw: f32 = (q0 * q1 + q2 * q3).atan2(0.5 - q1 * q1 - q2 * q2);
+        let roll: f32 = (q1 * q2 + q0 * q3).atan2(0.5 - q2 * q2 - q3 * q3);
+        let y = -2.0 * (q1 * q3 - q0 * q2);
+        let x = 1.0 + (1.0 - y * y).sqrt();
+        let pitch = 2.0 * y.atan2(x);
 
         Vector3 {
             x: roll * RAD_TO_DEG,
