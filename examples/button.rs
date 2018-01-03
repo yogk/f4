@@ -1,4 +1,4 @@
-//! Toggle LED by pressing the blue user button
+//! Toggle LED by interrupt when pressing the blue user button on PC13
 // #![deny(warnings)]
 #![feature(proc_macro)]
 #![no_std]
@@ -8,6 +8,7 @@ extern crate cortex_m_rtfm as rtfm;
 extern crate f4;
 
 use f4::led::{self, LED};
+use f4::button::{self, BUTTON};
 use rtfm::{app, Threshold};
 
 // TASKS & RESOURCES
@@ -36,33 +37,14 @@ fn button(_t: &mut Threshold, r: EXTI15_10::Resources) {
     } else {
         LED.off();
     }
-    // 10.3.6 Pending register
-    r.EXTI.pr.modify(|_, w| w.pr13().set_bit());
+    // Clear the button interrupt
+    BUTTON.clear_pending(&r.EXTI);
 }
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, _r: init::Resources) {
     led::init(p.GPIOA, p.RCC);
-
-    // Enable GPIOC
-    p.RCC.ahb1enr.modify(|_, w| w.gpiocen().set_bit());
-    // Configure PC13 as input with pull-downs, RM0368 Table 23
-    p.GPIOC.moder.modify(|_, w| unsafe { w.moder13().bits(0) });
-    p.GPIOC
-        .pupdr
-        .modify(|_, w| unsafe { w.pupdr13().bits(0b10) });
-    // System configuration controller clock enable
-    p.RCC.apb2enr.modify(|_, w| w.syscfgen().set_bit());
-    // Enable external interrupt RM0368 7.2.6
-    p.SYSCFG
-        .exticr4
-        .modify(|_, w| unsafe { w.exti13().bits(0b0010) });
-    // Interrupt request from line 13 is not masked
-    p.EXTI.imr.modify(|_, w| w.mr13().set_bit());
-    // Rising edge trigger
-    p.EXTI.rtsr.modify(|_, w| w.tr13().set_bit());
-    // Falling edge trigger
-    // p.EXTI.ftsr.modify(|_, w| w.tr13().set_bit());
+    button::init(p.GPIOC, p.RCC, p.SYSCFG, p.EXTI);
 }
 
 // IDLE LOOP

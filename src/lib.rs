@@ -38,6 +38,7 @@ pub mod examples;
 pub mod math_utils;
 pub mod dma;
 pub mod led;
+pub mod button;
 pub mod leds;
 pub mod serial;
 pub mod timer;
