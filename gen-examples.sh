@@ -5,15 +5,29 @@ set -ex
 
 main() {
     local examples=(
+        blinky-blocking
+        blinky
+        button
+        capture4
+        concurrency
+        hello-world
         hello
+        imu
         itm
         led
-        blinky
-        roulette
         loopback
-        concurrency
-        resource
+        mco
         preemption
+        pwm-control
+        pwm1
+        resource
+        roulette
+        spi1
+        timer-interrupt
+        usart2-dma
+        usart2-rx-dma
+        usart2-tx-dma
+        ws2812
     )
 
     rm -rf src/examples

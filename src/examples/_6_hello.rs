@@ -1,4 +1,4 @@
-//! Turns all the user LEDs on
+//! Prints "Hello, World" in the OpenOCD console
 //!
 //! ```
 //! #![deny(unsafe_code)]
@@ -7,28 +7,22 @@
 //! #![no_std]
 //!
 //! extern crate cortex_m_rtfm as rtfm;
+//! #[macro_use]
 //! extern crate f4;
 //!
-//! use f4::led::{self, LEDS};
 //! use rtfm::app;
 //!
-//! // TASKS & RESOURCES
 //! app! {
 //!     device: f4::stm32f40x,
 //! }
 //!
-//! // INITIALIZATION PHASE
-//! fn init(p: init::Peripherals) {
-//!     led::init(&p.GPIOA, &p.RCC);
-//! }
+//! fn init(_p: init::Peripherals) {}
 //!
-//! // IDLE LOOP
 //! fn idle() -> ! {
-//!     for led in &LEDS {
-//!         led.on();
-//!     }
+//!     let f = 1.0;
+//!     println!("Hello, world! {}", f);
 //!
-//!     // Sleep
+//!     rtfm::bkpt();
 //!     loop {
 //!         rtfm::wfi();
 //!     }

@@ -1,4 +1,4 @@
-//! A LED roulette!
+//! Blinks an LED
 //!
 //! ```
 //! #![deny(unsafe_code)]
@@ -6,31 +6,29 @@
 //! #![feature(proc_macro)]
 //! #![no_std]
 //!
-//! extern crate cast;
-//! extern crate f4;
 //! extern crate cortex_m;
 //! extern crate cortex_m_rtfm as rtfm;
+//! extern crate f4;
 //!
-//! use cast::{usize, u8};
 //! use cortex_m::peripheral::SystClkSource;
-//! use f4::led::{self, LEDS};
+//! use f4::led::{self, LED};
 //! use rtfm::{app, Threshold};
 //!
 //! // CONFIGURATION
-//! const DIVISOR: u32 = 4;
+//! const FREQUENCY: u32 = 1; // Hz
 //!
 //! // TASKS & RESOURCES
 //! app! {
 //!     device: f4::stm32f40x,
 //!
 //!     resources: {
-//!         static STATE: u8 = 0;
+//!         static ON: bool = false;
 //!     },
 //!
 //!     tasks: {
 //!         SYS_TICK: {
-//!             path: roulette,
-//!             resources: [STATE],
+//!             path: toggle,
+//!             resources: [ON],
 //!         },
 //!     },
 //! }
@@ -40,7 +38,7 @@
 //!     led::init(p.GPIOA, p.RCC);
 //!
 //!     p.SYST.set_clock_source(SystClkSource::Core);
-//!     p.SYST.set_reload(16_000_000 / DIVISOR);
+//!     p.SYST.set_reload(16_000_000 / FREQUENCY);
 //!     p.SYST.enable_interrupt();
 //!     p.SYST.enable_counter();
 //! }
@@ -54,14 +52,15 @@
 //! }
 //!
 //! // TASKS
-//! fn roulette(_t: &mut Threshold, r: SYS_TICK::Resources) {
-//!     let curr = **r.STATE;
-//!     let next = (curr + 1) % u8(LEDS.len()).unwrap();
+//! // Toggle the state of the LED
+//! fn toggle(_t: &mut Threshold, r: SYS_TICK::Resources) {
+//!     **r.ON = !**r.ON;
 //!
-//!     LEDS[usize(curr)].off();
-//!     LEDS[usize(next)].on();
-//!
-//!     **r.STATE = next;
+//!     if **r.ON {
+//!         LED.on();
+//!     } else {
+//!         LED.off();
+//!     }
 //! }
 //! ```
 // Auto-generated. Do not modify.

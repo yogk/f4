@@ -1,14 +1,11 @@
-//! Sharing memory using a `Resource`
+//! Sharing memory using `Resource`
 //!
 //! This builds on top of the `concurrent` example. The `loopback` task now
-//! additionally parses the received data as a command. Three commands are
+//! additionally parses the received data as a command. Two commands are
 //! available:
 //!
 //! - `reverse` - reverses the spin direction of the LED roulette
-//! - `bounce` - puts the roulette in *bounce* mode where it reverses its spin
-//!   direction every time it completes one turn.
-//! - `continuous` - puts the roulette in *continuous* mode where it keeps
-//!   spinning in the same direction.
+//! - `reset` - moves the roulette back to its start position (North)
 //!
 //! ```
 //! #![deny(unsafe_code)]
@@ -26,23 +23,22 @@
 //! use cast::{usize, u8};
 //! use cortex_m::peripheral::SystClkSource;
 //! use f4::Serial;
-//! use f4::led::{self, LEDS};
+//! use f4::leds::LEDS;
 //! use f4::prelude::*;
 //! use f4::serial::Event;
-//! use f4::time::Hertz;
 //! use heapless::Vec;
-//! use rtfm::{app, Threshold};
+//! use rtfm::{app, Resource, Threshold};
+//! use f4::time::Hertz;
 //!
 //! // CONFIGURATION
 //! const BAUD_RATE: Hertz = Hertz(115_200);
 //! const DIVISOR: u32 = 4;
 //!
-//! // TASKS & RESOURCES
-//! app! {
+//! // TASK & RESOURCES
+//! app!{
 //!     device: f4::stm32f40x,
 //!
 //!     resources: {
-//!         // 16 byte buffer
 //!         static BUFFER: Vec<u8, [u8; 16]> = Vec::new([0; 16]);
 //!         static SHARED: State = State::new();
 //!         static STATE: u8 = 0;
@@ -51,27 +47,28 @@
 //!     tasks: {
 //!         USART2: {
 //!             path: receive,
+//!             priority: 1,
 //!             resources: [BUFFER, SHARED, USART2],
 //!         },
 //!
 //!         SYS_TICK: {
 //!             path: roulette,
+//!             priority: 2,
 //!             resources: [SHARED, STATE],
 //!         },
-//!     }
+//!     },
 //! }
 //!
 //! // INITIALIZATION PHASE
 //! fn init(p: init::Peripherals, _r: init::Resources) {
-//!     led::init(&p.GPIOA, &p.RCC);
+//!     f4::leds::init(&p.GPIOB, &p.RCC);
 //!
 //!     let serial = Serial(p.USART2);
 //!     serial.init(BAUD_RATE.invert(), Some(p.DMA1), p.GPIOA, p.RCC);
 //!     serial.listen(Event::Rxne);
 //!
-//!
 //!     p.SYST.set_clock_source(SystClkSource::Core);
-//!     p.SYST.set_reload(16_000_000 / DIVISOR);
+//!     p.SYST.set_reload(8_000_000 / DIVISOR);
 //!     p.SYST.enable_interrupt();
 //!     p.SYST.enable_counter();
 //! }
@@ -85,30 +82,41 @@
 //! }
 //!
 //! // TASKS
-//! fn receive(_t: &mut Threshold, r: USART2::Resources) {
+//! fn receive(t: &mut Threshold, mut r: USART2::Resources) {
 //!     let serial = Serial(&**r.USART2);
 //!
 //!     let byte = serial.read().unwrap();
-//!
-//!     serial.write(byte).unwrap();
+//!     if serial.write(byte).is_err() {
+//!         // As we are echoing the bytes as soon as they arrive, it should
+//!         // be impossible to have a TX buffer overrun
+//!         #[cfg(debug_assertions)]
+//!         unreachable!()
+//!     }
 //!
 //!     if byte == b'r' {
 //!         // end of command
 //!
 //!         match &***r.BUFFER {
-//!             b"bounce" => r.SHARED.mode = Mode::Bounce,
-//!             b"continuous" => r.SHARED.mode = Mode::Continuous,
+//!             b"bounce" => {
+//!                 r.SHARED.claim_mut(t, |shared, _| {
+//!                     shared.mode = Mode::Bounce;
+//!                 });
+//!             }
+//!             b"continuous" => {
+//!                 r.SHARED.claim_mut(t, |shared, _| {
+//!                     shared.mode = Mode::Continuous;
+//!                 });
+//!             }
 //!             b"reverse" => {
-//!                 r.SHARED.direction = r.SHARED.direction.reverse();
+//!                 r.SHARED.claim_mut(t, |shared, _| {
+//!                     shared.direction = shared.direction.reverse();
+//!                 });
 //!             }
 //!             _ => {}
 //!         }
 //!
-//!         // clear the buffer to prepare for the next command
 //!         r.BUFFER.clear();
 //!     } else {
-//!         // push the byte into the buffer
-//!
 //!         if r.BUFFER.push(byte).is_err() {
 //!             // error: buffer full
 //!             // KISS: we just clear the buffer when it gets full
@@ -121,6 +129,7 @@
 //!     let curr = **r.STATE;
 //!
 //!     let mut direction = r.SHARED.direction;
+//!
 //!     if curr == 0 && r.SHARED.mode == Mode::Bounce {
 //!         direction = direction.reverse();
 //!         r.SHARED.direction = direction;
@@ -139,20 +148,6 @@
 //! }
 //!
 //! // SUPPORT CODE
-//! pub struct State {
-//!     direction: Direction,
-//!     mode: Mode,
-//! }
-//!
-//! impl State {
-//!     const fn new() -> Self {
-//!         State {
-//!             direction: Direction::Clockwise,
-//!             mode: Mode::Continuous,
-//!         }
-//!     }
-//! }
-//!
 //! #[derive(Clone, Copy)]
 //! enum Direction {
 //!     Clockwise,
@@ -172,6 +167,20 @@
 //! enum Mode {
 //!     Bounce,
 //!     Continuous,
+//! }
+//!
+//! pub struct State {
+//!     direction: Direction,
+//!     mode: Mode,
+//! }
+//!
+//! impl State {
+//!     const fn new() -> Self {
+//!         State {
+//!             direction: Direction::Clockwise,
+//!             mode: Mode::Continuous,
+//!         }
+//!     }
 //! }
 //! ```
 // Auto-generated. Do not modify.

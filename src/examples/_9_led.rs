@@ -1,4 +1,4 @@
-//! Prints "Hello, world" on the OpenOCD console
+//! Turns all the user LEDs on
 //!
 //! ```
 //! #![deny(unsafe_code)]
@@ -7,13 +7,10 @@
 //! #![no_std]
 //!
 //! extern crate cortex_m_rtfm as rtfm;
-//! extern crate cortex_m_semihosting as semihosting;
 //! extern crate f4;
 //!
-//! use core::fmt::Write;
-//!
+//! use f4::led::{self, LED};
 //! use rtfm::app;
-//! use semihosting::hio;
 //!
 //! // TASKS & RESOURCES
 //! app! {
@@ -21,14 +18,17 @@
 //! }
 //!
 //! // INITIALIZATION PHASE
-//! fn init(_p: init::Peripherals) {}
+//! fn init(p: init::Peripherals) {
+//!     led::init(&p.GPIOA, &p.RCC);
+//! }
 //!
 //! // IDLE LOOP
 //! fn idle() -> ! {
-//!     writeln!(hio::hstdout().unwrap(), "Hello, world!").unwrap();
-//!
+//!     // Sleep
 //!     loop {
+//!         LED.on();
 //!         rtfm::wfi();
+//!         LED.off();
 //!     }
 //! }
 //! ```
