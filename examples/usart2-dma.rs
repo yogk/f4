@@ -41,7 +41,7 @@ app! {
     device: f4::stm32f40x,
 
     resources: {
-        static CMD_BUFFER: Vec<u8, [u8; MAX_CMD_LEN]> = Vec::new([0; MAX_CMD_LEN]);
+        static CMD_BUFFER: Vec<u8, [u8; MAX_CMD_LEN]> = Vec::new();
         static RX_BUFFER: Buffer<[u8; MAX_RX_LEN], Dma1Channel5> = Buffer::new([0; MAX_RX_LEN]);
         static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Channel6> = Buffer::new([0; MAX_TX_LEN]);
         static CNT: u8 = 0;

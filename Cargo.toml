@@ -10,15 +10,22 @@ repository = "https://github.com/jsjolund/f4"
 version = "0.1.0"
 
 [dependencies]
+cortex-m-semihosting = "0.2.0"
 static-ref = "0.2.0"
+volatile-register = "0.2.0"
 m = "0.1.1"
-
-[dependencies.cortex-m-debug]
-git = "https://gitlab.henriktjader.com/pln/cortex-m-debug.git"
 
 [dependencies.cast]
 default-features = false
 version = "0.2.2"
+
+[dependencies.cortex-m]
+version = "0.3.1"
+#git = "https://github.com/japaric/cortex-m"
+
+[dependencies.either]
+default-features = false
+version = "1.3.0"
 
 [dependencies.embedded-hal]
 git = "https://github.com/japaric/embedded-hal"
@@ -27,21 +34,27 @@ rev = "7d904f515d15fd5fe7ea34e18820ea83e2651fa2"
 [dependencies.nb]
 git = "https://github.com/japaric/nb"
 
-[dependencies.stm32f40x]
-features = ["rt"]
-#version = "0.5.0"
-git = "https://gitlab.henriktjader.com/pln/STM32F40x"
-
 [dev-dependencies]
-cortex-m = "0.3.0"
-cortex-m-rtfm = "0.2.0"
-cortex-m-semihosting = "0.2.0"
-heapless = "0.1.0"
+heapless = "0.2.0"
 
 [dev-dependencies.cortex-m-rt]
 features = ["abort-on-panic"]
-version = "=0.3.7"
+version = "0.3.8"
+
+#[dependencies.cortex-m-debug]
+#git = "https://gitlab.henriktjader.com/pln/cortex-m-debug.git"
+
+[dev-dependencies.cortex-m-rtfm]
+version = "0.2.0"
+#git = "https://github.com/japaric/cortex-m-rtfm"
+
+[dependencies.stm32f40x]
+features = ["rt"]
+git = "https://gitlab.henriktjader.com/pln/STM32F40x"
 
 [profile.release]
-debug = true
 lto = true
+
+[profile.dev]
+incremental = false
+codegen-units = 1

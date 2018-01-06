@@ -1,3 +1,4 @@
+//! PWM test
 #![deny(unsafe_code)]
 #![deny(warnings)]
 #![feature(proc_macro)]

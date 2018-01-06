@@ -20,7 +20,7 @@ extern crate stm32f40x;
 use f4::Spi;
 use f4::prelude::*;
 use rtfm::{app, Threshold};
-use stm32f40x::GPIOA;
+use stm32f40x::{GPIOA};
 
 app! {
     device: f4::stm32f40x,

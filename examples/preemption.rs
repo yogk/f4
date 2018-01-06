@@ -37,7 +37,7 @@ app!{
     device: f4::stm32f40x,
 
     resources: {
-        static BUFFER: Vec<u8, [u8; 16]> = Vec::new([0; 16]);
+        static BUFFER: Vec<u8, [u8; 16]> = Vec::new();
         static SHARED: State = State::new();
         static STATE: u8 = 0;
     },

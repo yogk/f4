@@ -32,9 +32,6 @@ extern crate nb;
 extern crate static_ref;
 pub extern crate stm32f40x;
 
-// For documentation only
-pub mod examples;
-
 pub mod math_utils;
 pub mod dma;
 pub mod led;
@@ -50,6 +47,7 @@ pub mod spi;
 pub mod lsm9ds1;
 pub mod frequency;
 pub mod madgwick_ahrs;
+pub mod dwt;
 
 use frequency::*;
 
