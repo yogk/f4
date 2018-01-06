@@ -47,6 +47,7 @@ pub mod spi;
 pub mod lsm9ds1;
 pub mod frequency;
 pub mod madgwick_ahrs;
+pub mod dwt;
 
 use frequency::*;
 
