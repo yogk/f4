@@ -1,4 +1,4 @@
-# `blue-pill`
+# `f4`
 
 > Board Support Crate for [NUCLEO-F411RE] and [NUCLEO-F401RE]
 
