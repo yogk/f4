@@ -46,7 +46,7 @@ use core::f32;
 use f4::lsm9ds1::{ImuSettings, Lsm9ds1};
 use f4::Serial;
 use f4::Spi;
-use f4::dma::{Buffer, Dma1Channel5, Dma1Channel6};
+use f4::dma::{Buffer, Dma1Stream5, Dma1Stream6};
 use f4::time::Hertz;
 use f4::clock;
 use f4::timer::Timer;
@@ -79,8 +79,8 @@ app! {
 
     resources: {
         // Serial
-        static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Channel6> = Buffer::new([0; MAX_TX_LEN]);
-        static RX_BUFFER: Buffer<[u8; 1], Dma1Channel5> = Buffer::new([0; 1]);
+        static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Stream6> = Buffer::new([0; MAX_TX_LEN]);
+        static RX_BUFFER: Buffer<[u8; 1], Dma1Stream5> = Buffer::new([0; 1]);
         static MODE: OutputMode = OutputMode::Euler;
         // IMU
         static FILTER: MadgwickAhrs = MadgwickAhrs::begin(SAMPLE_FREQUENCY as f32);

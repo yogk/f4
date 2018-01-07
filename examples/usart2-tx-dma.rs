@@ -9,7 +9,7 @@ extern crate cortex_m_rtfm as rtfm;
 extern crate f4;
 
 use f4::Serial;
-use f4::dma::{Buffer, Dma1Channel6};
+use f4::dma::{Buffer, Dma1Stream6};
 use f4::time::Hertz;
 use rtfm::{app, Threshold};
 
@@ -19,7 +19,7 @@ app! {
     device: f4::stm32f40x,
 
     resources: {
-        static BUFFER: Buffer<[u8; 15], Dma1Channel6> = Buffer::new([0; 15]);
+        static BUFFER: Buffer<[u8; 15], Dma1Stream6> = Buffer::new([0; 15]);
     },
 
     tasks: {

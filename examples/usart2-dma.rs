@@ -16,7 +16,7 @@ use core::ops::Deref;
 use f4::Serial;
 use f4::U8Writer;
 use f4::prelude::*;
-use f4::dma::{Buffer, Dma1Channel5, Dma1Channel6};
+use f4::dma::{Buffer, Dma1Stream5, Dma1Stream6};
 use f4::time::Hertz;
 use f4::clock;
 use heapless::Vec;
@@ -42,8 +42,8 @@ app! {
 
     resources: {
         static CMD_BUFFER: Vec<u8, [u8; MAX_CMD_LEN]> = Vec::new();
-        static RX_BUFFER: Buffer<[u8; MAX_RX_LEN], Dma1Channel5> = Buffer::new([0; MAX_RX_LEN]);
-        static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Channel6> = Buffer::new([0; MAX_TX_LEN]);
+        static RX_BUFFER: Buffer<[u8; MAX_RX_LEN], Dma1Stream5> = Buffer::new([0; MAX_RX_LEN]);
+        static TX_BUFFER: Buffer<[u8; MAX_TX_LEN], Dma1Stream6> = Buffer::new([0; MAX_TX_LEN]);
         static CNT: u8 = 0;
     },
 

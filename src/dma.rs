@@ -19,28 +19,28 @@ pub enum Error {
     Transfer,
 }
 
-/// Channel 1 of DMA1
-pub struct Dma1Channel1 {
+/// Stream 1 of DMA1
+pub struct Dma1Stream1 {
     _0: (),
 }
 
-/// Channel 2 of DMA1
-pub struct Dma1Channel2 {
+/// Stream 2 of DMA1
+pub struct Dma1Stream2 {
     _0: (),
 }
 
-/// Channel 4 of DMA1
-pub struct Dma1Channel4 {
+/// Stream 4 of DMA1
+pub struct Dma1Stream4 {
     _0: (),
 }
 
-/// Channel 5 of DMA1
-pub struct Dma1Channel5 {
+/// Stream 5 of DMA1
+pub struct Dma1Stream5 {
     _0: (),
 }
 
-/// Channel 6 of DMA1
-pub struct Dma1Channel6 {
+/// Stream 6 of DMA1
+pub struct Dma1Stream6 {
     _0: (),
 }
 
@@ -206,7 +206,7 @@ impl<T, CHANNEL> Buffer<T, CHANNEL> {
 }
 
 // FIXME these `release` methods probably want some of sort of barrier
-impl<T> Buffer<T, Dma1Channel2> {
+impl<T> Buffer<T, Dma1Stream2> {
     /// Waits until the DMA releases this buffer
     pub fn release(&self, dma1: &DMA1) -> nb::Result<(), Error> {
         let state = self.state.get();
@@ -228,7 +228,7 @@ impl<T> Buffer<T, Dma1Channel2> {
     }
 }
 
-impl<T> Buffer<T, Dma1Channel4> {
+impl<T> Buffer<T, Dma1Stream4> {
     /// Waits until the DMA releases this buffer
     pub fn release(&self, dma1: &DMA1) -> nb::Result<(), Error> {
         let state = self.state.get();
@@ -250,7 +250,7 @@ impl<T> Buffer<T, Dma1Channel4> {
     }
 }
 
-impl<T> Buffer<T, Dma1Channel5> {
+impl<T> Buffer<T, Dma1Stream5> {
     /// Waits until the DMA releases this buffer
     pub fn release(&self, dma1: &DMA1) -> nb::Result<(), Error> {
         let state = self.state.get();
@@ -272,7 +272,7 @@ impl<T> Buffer<T, Dma1Channel5> {
     }
 }
 
-impl<T> Buffer<T, Dma1Channel6> {
+impl<T> Buffer<T, Dma1Stream6> {
     /// Waits until the DMA releases this buffer
     pub fn release(&self, dma1: &DMA1) -> nb::Result<(), Error> {
         let state = self.state.get();
@@ -322,7 +322,7 @@ enum CircState {
     MutatingSecondHalf,
 }
 
-impl<B> CircBuffer<B, Dma1Channel5> {
+impl<B> CircBuffer<B, Dma1Stream5> {
     /// Constructs a circular buffer from two halves
     pub const fn new(buffer: [B; 2]) -> Self {
         CircBuffer {

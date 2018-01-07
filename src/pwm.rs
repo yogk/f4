@@ -38,7 +38,7 @@ use hal;
 use static_ref::Static;
 use stm32f40x::{DMA1, TIM1, TIM2, TIM3, TIM4, GPIOA, GPIOB, GPIOC, RCC};
 
-use dma::{self, Buffer, Dma1Channel2};
+use dma::{self, Buffer, Dma1Stream2};
 use timer::Channel;
 
 /// PWM driver
@@ -309,7 +309,7 @@ macro_rules! impl_Pwm {
                 &self,
                 dma1: &DMA1,
                 channel: Channel,
-                buffer: &Static<Buffer<B, Dma1Channel2>>,
+                buffer: &Static<Buffer<B, Dma1Stream2>>,
             ) -> ::core::result::Result<(), dma::Error>
             where
                 B: Unsize<[u8]>,

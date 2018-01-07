@@ -19,7 +19,7 @@ use nb;
 use static_ref::Static;
 use stm32f40x::{gpioa, DMA1, USART2, usart6, GPIOA, RCC};
 
-use dma::{self, Buffer, Dma1Channel5, Dma1Channel6};
+use dma::{self, Buffer, Dma1Stream5, Dma1Stream6};
 
 use core::fmt;
 
@@ -338,7 +338,7 @@ impl<'a> Serial<'a, USART2> {
     pub fn read_exact<B>(
         &self,
         dma1: &DMA1,
-        buffer: &Static<Buffer<B, Dma1Channel5>>,
+        buffer: &Static<Buffer<B, Dma1Stream5>>,
     ) -> ::core::result::Result<(), dma::Error>
     where
         B: Unsize<[u8]>,
@@ -369,7 +369,7 @@ impl<'a> Serial<'a, USART2> {
     pub fn write_all<B>(
         &self,
         dma1: &DMA1,
-        buffer: &Static<Buffer<B, Dma1Channel6>>,
+        buffer: &Static<Buffer<B, Dma1Stream6>>,
     ) -> ::core::result::Result<(), dma::Error>
     where
         B: Unsize<[u8]>,
