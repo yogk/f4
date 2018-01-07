@@ -47,7 +47,7 @@ fn init(p: init::Peripherals, r: init::Resources) {
     p.SYST.set_reload(**r.CLK / FREQUENCY);
     p.SYST.enable_interrupt();
     p.SYST.enable_counter();
-        // We must enable the cyccnt for try_until to work
+    // We must enable the cyccnt for try_until to work
     p.DWT.enable_cycle_counter();
 }
 
@@ -55,7 +55,7 @@ fn init(p: init::Peripherals, r: init::Resources) {
 fn idle(t: &mut Threshold, r: ::idle::Resources) -> ! {
     use rtfm::Resource;
 
-    // Try the closure every 50 ms (20 Hz)
+    // Try the closure for 50 ms (20 Hz)
     let try_cycles = *r.CLK / 20;
 
     // Infinite loop
