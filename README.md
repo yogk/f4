@@ -62,6 +62,6 @@ The peripheral pin configuration should match the standard Arduino headers.
 
 [STM32F411 Datasheet](https://www.st.com/resource/en/datasheet/stm32f401re.pdf)
 
-[STM32F411 Reference Manual (RM0383)](www.st.com/resource/en/reference_manual/dm00119316.pdf)
+[STM32F411 Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316.pdf)
 
-[STM32F401 Reference Manual (RM0368)](www.st.com/resource/en/reference_manual/dm00096844.pdf)
+[STM32F401 Reference Manual (RM0368)](https://www.st.com/resource/en/reference_manual/dm00096844.pdf)
