@@ -1,3 +1,5 @@
+[![Build status](https://travis-ci.org/jsjolund/f4.svg?branch=master)](https://travis-ci.org/jsjolund/f4)
+
 # `f4`
 
 > Board Support Crate for [NUCLEO-F411RE] and [NUCLEO-F401RE]
