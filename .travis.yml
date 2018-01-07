@@ -23,6 +23,9 @@ script:
 
 after_script: set +e
 
+after_success:
+  - bash ci/after_success.sh
+
 cache: cargo
 before_cache:
   # Travis can't cache files that are not readable by "others"
@@ -30,8 +33,6 @@ before_cache:
 
 branches:
   only:
-    # release tags
-    - /^v\d+\.\d+\.\d+.*$/
     - auto
     - master
     - try
