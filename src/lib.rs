@@ -48,6 +48,7 @@ pub mod lsm9ds1;
 pub mod frequency;
 pub mod madgwick_ahrs;
 pub mod dwt;
+pub mod adc;
 
 use frequency::*;
 
@@ -59,6 +60,7 @@ pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
 pub use spi::Spi;
+pub use adc::Adc;
 pub use lsm9ds1::{ImuSettings, Lsm9ds1};
 pub use madgwick_ahrs::MadgwickAhrs;
 

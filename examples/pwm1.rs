@@ -35,7 +35,6 @@ fn init(p: init::Peripherals) {
         );
         pwm.set_duty(*c, pwm.get_max_duty() / 16);
         pwm.enable(*c);
-        // rtfm::bkpt();
     }
 }
 

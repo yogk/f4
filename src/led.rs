@@ -36,4 +36,13 @@ impl PA5 {
     pub fn is_on(&self) -> bool {
         unsafe { (*GPIOA.get()).odr.read().odr5().bit_is_set() }
     }
+
+    /// Toggles LED state.
+    pub fn toggle(&self) {
+        if LED.is_on() {
+            LED.off();
+        } else {
+            LED.on();
+        }
+    }
 }
