@@ -12,6 +12,8 @@ use cortex_m::peripheral::SystClkSource;
 use f4::led::{self, LED};
 use f4::clock;
 use f4::dwt;
+use f4::time::Milliseconds;
+use f4::frequency::ahb1::{Ticks};
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
@@ -23,10 +25,9 @@ app! {
 
     resources: {
         static INTEGRATOR: u32 = 0;
-        static CLK: u32 = 0;
     },
     idle: {
-        resources: [DWT, CLK, INTEGRATOR],
+        resources: [DWT, INTEGRATOR],
     },
     tasks: {
         SYS_TICK: {
@@ -38,15 +39,18 @@ app! {
 
 // INITIALIZATION PHASE
 fn init(p: init::Peripherals, r: init::Resources) {
-    // Try clocking to see that it works. Store the frequency as a resource.
-    **r.CLK = clock::set_84_mhz(&p.RCC, &p.FLASH);
+    // Try clocking to see that it works.
+    let hclk = clock::set_84_mhz(&p.RCC, &p.FLASH);
+
     // Initialize the user LED
     led::init(p.GPIOA, p.RCC);
+    
     // Start the systick timer
     p.SYST.set_clock_source(SystClkSource::Core);
-    p.SYST.set_reload(**r.CLK / FREQUENCY);
+    p.SYST.set_reload(hclk / FREQUENCY);
     p.SYST.enable_interrupt();
     p.SYST.enable_counter();
+    
     // We must enable the cyccnt for try_until to work
     p.DWT.enable_cycle_counter();
 }
@@ -55,14 +59,14 @@ fn init(p: init::Peripherals, r: init::Resources) {
 fn idle(t: &mut Threshold, r: ::idle::Resources) -> ! {
     use rtfm::Resource;
 
-    // Try the closure for 50 ms (20 Hz)
-    let try_cycles = *r.CLK / 20;
+    // Try the closure for 50 ms
+    let try_ticks: Ticks = Ticks::from(Milliseconds(50));
 
     // Infinite loop
     loop {
-        // Try until the closure for a set number of clock cycles.
+        // Try the closure for a set number of clock cycles.
         // We need to capture the mutable Threshold t, so use the mutable try.
-        match dwt::try_mut_until(&r.DWT, try_cycles, &mut || {
+        match dwt::try_mut_until(&r.DWT, try_ticks.into(), &mut || {
             // Claim the integrator long enough to clone it
             let integrator = r.INTEGRATOR.claim(t, |v, _| **v.clone());
             // The integrator becomes even every 200 ms since the

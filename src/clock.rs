@@ -45,7 +45,7 @@ pub fn set(rcc: &RCC, flash: &FLASH, m: u8, n: u16, p: u8) -> u32 {
 
     // setting up the flash memory latency
     // RM0368 8.4.1 (register), 3.4 Table 6
-    // apb1 will be at half system clock
+    // apb1 will be at half system clock (50 MHz max)
     rcc.cfgr.modify(|_, w| unsafe { w.ppre1().bits(4) }); //Configure apb1 prescaler = 2,
     ::apb1::set_frequency(hclk / 2);
     ::ahb1::set_frequency(hclk);

@@ -1,5 +1,5 @@
 //! Toggle LED by interrupt when pressing the blue user button on PC13
-// #![deny(warnings)]
+#![deny(warnings)]
 #![feature(proc_macro)]
 #![no_std]
 
