@@ -60,7 +60,7 @@ pub use timer::{Channel, Timer};
 pub use pwm::Pwm;
 pub use capture::Capture;
 pub use spi::Spi;
-pub use adc::Adc;
+pub use adc::{Adc, AdcChannel};
 pub use lsm9ds1::{ImuSettings, Lsm9ds1};
 pub use madgwick_ahrs::MadgwickAhrs;
 

@@ -7,70 +7,186 @@ use hal::prelude::*;
 use static_ref::Static;
 
 use dma::{self, CircBuffer, Dma2Stream0};
-use stm32f40x::{ADC1, DMA2, TIM2, GPIOA, RCC};
+use stm32f40x::{ADC1, DMA2, TIM2, GPIOA, GPIOB, GPIOC, RCC};
 use {Channel, Pwm};
 
-/// Input associated to ADC1
+/// Input channel associated to ADC1
 #[derive(Clone, Copy, Debug)]
-pub enum AdcIn {
-    /// ADC1_IN0
-    _0,
-    /// ADC1_IN1
-    _1,
-    /// ADC1_IN2
-    _2,
-    /// ADC1_IN3
-    _3,
-    /// ADC1_IN4
-    _4,
-    /// ADC1_IN5
-    _5,
-    /// ADC1_IN6
-    _6,
-    /// ADC1_IN7
-    _7,
-    /// ADC1_IN8
-    _8,
-    /// ADC1_IN9
-    _9,
-    /// ADC1_IN10
-    _10,
-    /// ADC1_IN11
-    _11,
-    /// ADC1_IN12
-    _12,
-    /// ADC1_IN13
-    _13,
-    /// ADC1_IN14
-    _14,
-    /// ADC1_IN15
-    _15,
+pub enum AdcChannel {
+    /// ADC1_IN0 = PA0
+    _0 = 0,
+    /// ADC1_IN1 = PA1
+    _1 = 1,
+    /// ADC1_IN2 = PA2 (Unimplemented: conflicts with USB USART2_TX)
+    // _2 = 2,
+    /// ADC1_IN3 = PA3 (Unimplemented: conflicts with USB USART2_RX)
+    // _3 = 3,
+    /// ADC1_IN4 = PA4
+    _4 = 4,
+    /// ADC1_IN5 = PA5
+    _5 = 5,
+    /// ADC1_IN6 = PA6
+    _6 = 6,
+    /// ADC1_IN7 = PA7
+    _7 = 7,
+    /// ADC1_IN8 = PB0
+    _8 = 8,
+    /// ADC1_IN9 = PB1
+    _9 = 9,
+    /// ADC1_IN10 = PC0
+    _10 = 10,
+    /// ADC1_IN11 = PC1
+    _11 = 11,
+    /// ADC1_IN12 = PC2
+    _12 = 12,
+    /// ADC1_IN13 = PC3
+    _13 = 13,
+    /// ADC1_IN14 = PC4
+    _14 = 14,
+    /// ADC1_IN15 = PC5
+    _15 = 15,
 }
 
 /// ADC1
 pub struct Adc<'a>(pub &'a ADC1);
 
 impl<'a> Adc<'a> {
+    /// Enables the ADC input
+    pub fn enable_input(
+        &self,
+        input: AdcChannel,
+        sq: u8,
+        gpioa: &GPIOA,
+        gpiob: &GPIOB,
+        gpioc: &GPIOC,
+    ) {
+        let adc1 = self.0;
+
+        // RM0368 11.12.9
+        unsafe {
+            match sq {
+                1 => adc1.sqr3.modify(|_, w| w.sq1().bits(input as u8)),
+                2 => adc1.sqr3.modify(|_, w| w.sq2().bits(input as u8)),
+                3 => adc1.sqr3.modify(|_, w| w.sq3().bits(input as u8)),
+                4 => adc1.sqr3.modify(|_, w| w.sq4().bits(input as u8)),
+                5 => adc1.sqr3.modify(|_, w| w.sq5().bits(input as u8)),
+                6 => adc1.sqr3.modify(|_, w| w.sq6().bits(input as u8)),
+                7 => adc1.sqr2.modify(|_, w| w.sq7().bits(input as u8)),
+                8 => adc1.sqr2.modify(|_, w| w.sq8().bits(input as u8)),
+                9 => adc1.sqr2.modify(|_, w| w.sq9().bits(input as u8)),
+                10 => adc1.sqr2.modify(|_, w| w.sq10().bits(input as u8)),
+                11 => adc1.sqr2.modify(|_, w| w.sq11().bits(input as u8)),
+                12 => adc1.sqr2.modify(|_, w| w.sq12().bits(input as u8)),
+                13 => adc1.sqr1.modify(|_, w| w.sq13().bits(input as u8)),
+                14 => adc1.sqr1.modify(|_, w| w.sq14().bits(input as u8)),
+                15 => adc1.sqr1.modify(|_, w| w.sq15().bits(input as u8)),
+                16 => adc1.sqr1.modify(|_, w| w.sq16().bits(input as u8)),
+                _ => panic!("invalid sequence register"),
+            }
+        }
+
+        // Use as many conversions as maximum channel sequence number
+        let l = adc1.sqr1.read().l().bits();
+        if l < sq {
+            adc1.sqr1
+                .modify(|_, w| unsafe { w.l().bits(sq.wrapping_sub(1)) });
+        }
+
+        // Set pins as analog input
+        match input {
+            AdcChannel::_0 => {
+                gpioa.afrl.modify(|_, w| w.afrl0().bits(0));
+                gpioa.moder.modify(|_, w| w.moder0().bits(0b11));
+                gpioa.pupdr.modify(|_, w| unsafe { w.pupdr0().bits(0b00) });
+            }
+            AdcChannel::_1 => {
+                gpioa.afrl.modify(|_, w| w.afrl1().bits(0));
+                gpioa.moder.modify(|_, w| w.moder1().bits(0b11));
+                gpioa.pupdr.modify(|_, w| unsafe { w.pupdr1().bits(0b00) });
+            }
+            // AdcChannel::_2 => {
+            //     unimplemented!();
+            // }
+            // AdcChannel::_3 => {
+            //     unimplemented!();
+            // }
+            AdcChannel::_4 => {
+                gpioa.afrl.modify(|_, w| w.afrl4().bits(0));
+                gpioa.moder.modify(|_, w| w.moder4().bits(0b11));
+                gpioa.pupdr.modify(|_, w| unsafe { w.pupdr4().bits(0b00) });
+            }
+            AdcChannel::_5 => {
+                gpioa.afrl.modify(|_, w| w.afrl5().bits(0));
+                gpioa.moder.modify(|_, w| w.moder5().bits(0b11));
+                gpioa.pupdr.modify(|_, w| unsafe { w.pupdr5().bits(0b00) });
+            }
+            AdcChannel::_6 => {
+                gpioa.afrl.modify(|_, w| w.afrl6().bits(0));
+                gpioa.moder.modify(|_, w| w.moder6().bits(0b11));
+                gpioa.pupdr.modify(|_, w| unsafe { w.pupdr6().bits(0b00) });
+            }
+            AdcChannel::_7 => {
+                gpioa.afrl.modify(|_, w| w.afrl7().bits(0));
+                gpioa.moder.modify(|_, w| w.moder7().bits(0b11));
+                gpioa.pupdr.modify(|_, w| unsafe { w.pupdr7().bits(0b00) });
+            }
+            AdcChannel::_8 => unsafe {
+                gpiob.afrl.modify(|_, w| w.afrl0().bits(0));
+                gpiob.moder.modify(|_, w| w.moder0().bits(0b11));
+                gpiob.pupdr.modify(|_, w| w.pupdr0().bits(0b00));
+            },
+            AdcChannel::_9 => unsafe {
+                gpiob.afrl.modify(|_, w| w.afrl1().bits(0));
+                gpiob.moder.modify(|_, w| w.moder1().bits(0b11));
+                gpiob.pupdr.modify(|_, w| w.pupdr1().bits(0b00));
+            },
+            AdcChannel::_10 => unsafe {
+                gpioc.afrl.modify(|_, w| w.afrl0().bits(0));
+                gpioc.moder.modify(|_, w| w.moder0().bits(0b11));
+                gpioc.pupdr.modify(|_, w| w.pupdr0().bits(0b00));
+            },
+            AdcChannel::_11 => unsafe {
+                gpioc.afrl.modify(|_, w| w.afrl1().bits(0));
+                gpioc.moder.modify(|_, w| w.moder1().bits(0b11));
+                gpioc.pupdr.modify(|_, w| w.pupdr1().bits(0b00));
+            },
+            AdcChannel::_12 => unsafe {
+                gpioc.afrl.modify(|_, w| w.afrl2().bits(0));
+                gpioc.moder.modify(|_, w| w.moder2().bits(0b11));
+                gpioc.pupdr.modify(|_, w| w.pupdr2().bits(0b00));
+            },
+            AdcChannel::_13 => unsafe {
+                gpioc.afrl.modify(|_, w| w.afrl3().bits(0));
+                gpioc.moder.modify(|_, w| w.moder3().bits(0b11));
+                gpioc.pupdr.modify(|_, w| w.pupdr3().bits(0b00));
+            },
+            AdcChannel::_14 => unsafe {
+                gpioc.afrl.modify(|_, w| w.afrl4().bits(0));
+                gpioc.moder.modify(|_, w| w.moder4().bits(0b11));
+                gpioc.pupdr.modify(|_, w| w.pupdr4().bits(0b00));
+            },
+            AdcChannel::_15 => unsafe {
+                gpioc.afrl.modify(|_, w| w.afrl5().bits(0));
+                gpioc.moder.modify(|_, w| w.moder5().bits(0b11));
+                gpioc.pupdr.modify(|_, w| w.pupdr5().bits(0b00));
+            },
+        }
+    }
+
     /// Initializes the ADC
     ///
     /// NOTE `Pwm<TIM2>.init` must be called before this method because both
     /// methods configure the PA1 pin (one as input and the other as output :-/)
-    pub fn init(&self, dma2: &DMA2, gpioa: &GPIOA, rcc: &RCC) {
+    pub fn init(&self, dma2: &DMA2, rcc: &RCC) {
         let adc1 = self.0;
 
         // enable ADC1, DMA1, GPIOA, TIM2
+        rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit());
+        rcc.ahb1enr.modify(|_, w| w.gpioben().set_bit());
+        rcc.ahb1enr.modify(|_, w| w.gpiocen().set_bit());
         rcc.ahb1enr.modify(|_, w| w.dma2en().set_bit());
         rcc.apb1enr.modify(|_, w| w.tim2en().set_bit());
         rcc.apb2enr.modify(|_, w| w.adc1en().set_bit());
-
-        // Set PA1 as analog input
-        gpioa.afrl.modify(|_, w| w.afrl1().bits(0));
-        gpioa.moder.modify(|_, w| w.moder1().bits(0b11));
-        gpioa.pupdr.modify(|_, w| unsafe { w.pupdr1().bits(0b00) });
-
-        // Sample only the channel 1
-        adc1.sqr1.modify(|_, w| unsafe { w.l().bits(1) });
-        adc1.sqr3.modify(|_, w| unsafe { w.sq1().bits(1) });
 
         // RM0368 11.12.5
         // Sample time: 55.5 + 12.5 = 68 cycles
@@ -112,11 +228,12 @@ impl<'a> Adc<'a> {
                 .en()
                 .clear_bit()
         });
-
+        // RM0368 11.12.3
         // exten: Conversion on external trigger rising edge
         // extsel: Timer 2 CC2 event
         // align: Right alignment
         // dma: DMA mode enabled
+        // dds: DMA requests are issued as long as data are converted and DMA=1
         // cont: Single conversion mode
         // adon: Disable ADC conversion
         adc1.cr2.write(|w| unsafe {
@@ -135,6 +252,9 @@ impl<'a> Adc<'a> {
                 .adon()
                 .clear_bit()
         });
+        // RM0368 11.3.8 and 11.12.2
+        // scan: Scan mode enabled
+        adc1.cr1.write(|w| w.scan().set_bit());
     }
 
     /// Disables the ADC
@@ -182,6 +302,8 @@ impl<'a> Adc<'a> {
 
         dma2.s0cr.modify(|_, w| w.en().set_bit());
         pwm.enable(Channel::_2);
+
+        adc1.cr2.modify(|_, w| w.swstart().set_bit());
 
         Ok(())
     }
