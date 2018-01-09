@@ -208,15 +208,11 @@ where
         // 8N1, stop bit
         usart.cr2.write(|w| unsafe { w.stop().bits(0b00) });
 
-        // baud rate
+        // Baud rate
         // Check if peripheral does not use default clock
-        let apb1psc = match rcc.cfgr.read().ppre1().bits() {
-            0b100 => 2,
-            0b101 => 4,
-            0b110 => 8,
-            0b111 => 16,
-            _ => 1,
-        };
+        let ahb1_clk: u32 = ::ahb1::Ticks::from(::time::Seconds(1)).into();
+        let apb1_clk: u32 = ::apb1::Ticks::from(::time::Seconds(1)).into();
+        let apb1psc: u32 =  ahb1_clk / apb1_clk;
         let brr = baud_rate.into() / apb1psc;
         assert!(brr >= 16, "impossible baud rate");
         usart.brr.write(|w| unsafe { w.bits(brr) });

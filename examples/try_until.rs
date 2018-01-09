@@ -59,6 +59,10 @@ fn init(p: init::Peripherals, r: init::Resources) {
 fn idle(t: &mut Threshold, r: ::idle::Resources) -> ! {
     use rtfm::Resource;
 
+    // Using f4::frequency::ahb1::Ticks allows us to calculate how
+    // many clock cycles/ticks that correspond to a certain time period,
+    // for a certain system clock frequency.
+    //
     // Try the closure for 50 ms
     let try_ticks: Ticks = Ticks::from(Milliseconds(50));
 
