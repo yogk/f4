@@ -36,6 +36,7 @@ git = "https://github.com/japaric/nb"
 
 [dependencies.stm32f40x]
 features = ["rt"]
+version = "0.2.0"
 git = "https://gitlab.henriktjader.com/pln/STM32F40x"
 
 [dev-dependencies]

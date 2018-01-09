@@ -1,5 +1,6 @@
 //! Try a closure until a certain number of clock cycles has passed
 #![deny(unsafe_code)]
+#![deny(warnings)]
 #![feature(proc_macro)]
 #![no_std]
 
@@ -38,7 +39,7 @@ app! {
 }
 
 // INITIALIZATION PHASE
-fn init(p: init::Peripherals, r: init::Resources) {
+fn init(p: init::Peripherals, _r: init::Resources) {
     // Try clocking to see that it works.
     let hclk = clock::set_84_mhz(&p.RCC, &p.FLASH);
 
