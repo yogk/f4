@@ -12,7 +12,7 @@ use f4::time::Hertz;
 use f4::{Channel, Pwm};
 use rtfm::app;
 
-const FREQUENCY: Hertz = Hertz(10_000);
+const FREQUENCY: Hertz = Hertz(1000);
 
 app! {
     device: f4::stm32f40x,
@@ -21,7 +21,7 @@ app! {
 fn init(p: init::Peripherals) {
     let pwm = Pwm(p.TIM2);
 
-    const CHANNELS: [Channel; 4] = [Channel::_1, Channel::_2, Channel::_3, Channel::_4];
+    const CHANNELS: [Channel; 3] = [Channel::_1, Channel::_2, Channel::_3];
 
     for c in &CHANNELS {
         pwm.init(

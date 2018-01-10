@@ -303,8 +303,6 @@ impl<'a> Adc<'a> {
         dma2.s0cr.modify(|_, w| w.en().set_bit());
         pwm.enable(Channel::_2);
 
-        adc1.cr2.modify(|_, w| w.swstart().set_bit());
-
         Ok(())
     }
 }
