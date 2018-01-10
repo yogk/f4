@@ -1,10 +1,9 @@
 //! Input capture using TIM4
 #![deny(unsafe_code)]
-// #![deny(warnings)]
+#![deny(warnings)]
 #![feature(proc_macro)]
 #![no_std]
 
-#[macro_use]
 extern crate cortex_m;
 #[macro_use]
 extern crate cortex_m_debug;
@@ -13,7 +12,7 @@ extern crate f4;
 extern crate nb;
 
 use f4::clock;
-use f4::time::{Milliseconds, Hertz};
+use f4::time::{Milliseconds};
 use f4::{Capture, Channel};
 use f4::prelude::*;
 use rtfm::{app, Threshold};
