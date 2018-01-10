@@ -246,7 +246,10 @@ macro_rules! impl_Capture {
                 tim.ccmr1_output.write(|w| unsafe {
                     w.bits((0b1111 << 12) | (0b01 << 8) | (0b1111 << 4) | (0b01 << 0))
                 });
-
+                tim.ccmr2_output.write(|w| unsafe {
+                    w.bits((0b1111 << 12) | (0b01 << 8) | (0b1111 << 4) | (0b01 << 0))
+                });
+                
                 // enable capture on rising edge
                 // capture pins disabled by default
                 match channel {
@@ -271,8 +274,12 @@ macro_rules! impl_Capture {
 
                 tim.arr.write(|w| unsafe{ w.bits(u32::MAX) });
 
-                // configure timer as a continuous upcounter and start
-                tim.cr1.write(|w| w.dir().bit(false).opm().bit(false).cen().set_bit());
+                // RM0368 13.4.1 
+                // udis: Update event disabled, shadow registers keep their value (ARR, PSC, CCRx)
+                // dir: Upcounter
+                // opm: One-pulse mode disabled
+                // cen: Counter enabled
+                tim.cr1.write(|w| w.udis().set_bit().dir().bit(false).opm().bit(false).cen().set_bit());
             }
 
             /// Starts listening for an interrupt `event`
@@ -303,6 +310,24 @@ macro_rules! impl_Capture {
                 let psc = resolution.0.checked_sub(1).expect("impossible resolution");
 
                 self.0.psc.write(|w| unsafe{ w.bits(psc)});
+            }
+
+            /// Clear the overcapture bit of channel
+            pub fn clear(&self, channel: Channel ) {
+                match channel {
+                    Channel::_1 => {
+                        self.0.ccr1.read().bits();
+                        self.0.sr.modify(|_,w|  w.cc1of().clear_bit() )},
+                    Channel::_2 => {
+                        self.0.ccr2.read().bits();
+                        self.0.sr.modify(|_,w|  w.cc2of().clear_bit() )},
+                    Channel::_3 => {
+                        self.0.ccr3.read().bits();
+                        self.0.sr.modify(|_,w|  w.cc3of().clear_bit() )},
+                    Channel::_4 => {
+                        self.0.ccr4.read().bits();
+                        self.0.sr.modify(|_,w|  w.cc4of().clear_bit() )},
+                }
             }
         }
 
