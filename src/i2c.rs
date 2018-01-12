@@ -121,17 +121,76 @@ macro_rules! impl_I2c {
             }
 
             ///
-            pub fn read(&self) -> Result<u8> {
+            pub fn start(&self, address: u8)  -> Result<()> {
                 let i2c = self.0;
-                let sr = i2c.sr1.read();
+                if i2c.sr2.read().msl().bit_is_set() {
+                    // Already in master mode, this is RESTART
 
+                    // Wait for tx to empty if not ACK failed.
+                    if i2c.sr1.read().tx_e().bit_is_clear() &&
+                    i2c.sr1.read().af().bit_is_clear() {
+                        return Err(nb::Error::WouldBlock);
+                    }
+                    // If we got NACK, use ACK pulling
+                }
+                // Enable ACK
+                i2c.cr1.modify(|_,w|  w.ack().set_bit());
+                // Send START condition
+                i2c.cr1.modify(|_, w| w.start().set_bit());
+                // Wait for repeated start generation
+                while i2c.sr1.read().sb().bit_is_clear() {}
+                unsafe {
+                    ptr::write_volatile(&i2c.dr as *const _ as *mut u8, address);
+                }
+                // Wait for end of address transmission
+                while i2c.sr1.read().addr().bit_is_clear() {
+                    if i2c.sr1.read().af().bit_is_set() {
+                        return Err(nb::Error::Other(Error::Timeout));
+                    }
+                }
+                Ok(())
+            }
+
+            ///
+            pub fn write(&self, byte: u8) -> Result<()> {
+                let i2c = self.0;
+                if i2c.sr1.read().addr().bit_is_set() {
+                    // Writing right after the address byte
+                    let _sr2 = i2c.sr2.read().bits();
+                }
+                let sr = i2c.sr1.read();
+                // if sr.ovr().bit_is_set() {
+                //     Err(nb::Error::Other(Error::Overrun))
+                // } else if sr.timeout().bit_is_set() {
+                //     Err(nb::Error::Other(Error::Timeout))
+                // } else if sr.berr().bit_is_set() {
+                //     Err(nb::Error::Other(Error::BusError))
+                // } else
+                if sr.tx_e().bit_is_set() || sr.btf().bit_is_set() {
+                    Ok(unsafe {
+                        ptr::write_volatile(&i2c.dr as *const _ as *mut u8, byte)
+                    })
+                } else {
+                    Err(nb::Error::WouldBlock)
+                }
+            }
+
+            ///
+            pub fn read_ack(&self) -> Result<u8> {
+                let i2c = self.0;
+                if i2c.sr1.read().addr().bit_is_set() {
+                    // Reading right after the address byte
+                    let _sr2 = i2c.sr2.read().bits();
+                }
+                let sr = i2c.sr1.read();
                 if sr.ovr().bit_is_set() {
                     Err(nb::Error::Other(Error::Overrun))
                 } else if sr.timeout().bit_is_set() {
                     Err(nb::Error::Other(Error::Timeout))
                 } else if sr.berr().bit_is_set() {
                     Err(nb::Error::Other(Error::BusError))
-                } else if sr.rx_ne().bit_is_set() {
+                } else
+                if sr.rx_ne().bit_is_set() || sr.btf().bit_is_set() {
                     Ok(unsafe {
                         ptr::read_volatile(&i2c.dr as *const _ as *const u8)
                     })
@@ -141,109 +200,41 @@ macro_rules! impl_I2c {
             }
 
             ///
-            pub fn start(&self, _control_byte: u8)  -> u8 {
+            pub fn read_nack(&self)  -> Result<u8> {
                 let i2c = self.0;
-
-                let _sr1 = i2c.sr1.read();
-                let _sr2 = i2c.sr2.read();
-
-                let bytes: [u8;4] = [0xa0, 0x00, 0x02, 0xa1];
-
-                i2c.cr1.modify(|_,w|  w.ack().set_bit());
-
-                i2c.cr1.modify(|_, w| w.start().set_bit());
-                while i2c.sr1.read().sb().bit_is_clear() {}
-
-                unsafe {
-                    ptr::write_volatile(&i2c.dr as *const _ as *mut u8, bytes[0]);
-                }
-                while i2c.sr1.read().addr().bit_is_clear() {}
-                while i2c.sr1.read().addr().bit_is_set() {
-                    let _sr2 = i2c.sr2.read();
-                }
-                while i2c.sr1.read().tx_e().bit_is_clear() {}
-
-                unsafe {
-                    ptr::write_volatile(&i2c.dr as *const _ as *mut u8, bytes[1]);
-                }
-
-                while i2c.sr1.read().tx_e().bit_is_clear() {}
-
-                unsafe {
-                    ptr::write_volatile(&i2c.dr as *const _ as *mut u8, bytes[2]);
-                }
-
-                while i2c.sr1.read().tx_e().bit_is_clear() {}
-
-                // Read
-                i2c.cr1.modify(|_, w| w.start().set_bit());
-                while i2c.sr1.read().sb().bit_is_clear() {}
-
-                unsafe {
-                    ptr::write_volatile(&i2c.dr as *const _ as *mut u8, bytes[3]);
-                }
-
-                i2c.cr1.modify(|_,w|  w.ack().clear_bit()); // if one byte rx
-                while i2c.sr1.read().addr().bit_is_clear() {}
-                while i2c.sr1.read().addr().bit_is_set() {
-                    let _sr2 = i2c.sr2.read();
-                }
-
-                while i2c.sr1.read().rx_ne().bit_is_clear() {}
-                let r: Result<u8> = Ok(unsafe {
-                    ptr::read_volatile(&i2c.dr as *const _ as *const u8)
-                });
-
+                // In case a single byte has to be received, the Acknowledge disable
+                // is made before ADDR flag is cleared.
+                // Disable ACK
                 i2c.cr1.modify(|_,w|  w.ack().clear_bit());
 
+                if i2c.sr1.read().addr().bit_is_set() {
+                    // Reading right after the address byte
+                    let _sr2 = i2c.sr2.read().bits();
+                }
+                // Send STOP condition
                 i2c.cr1.modify(|_, w| w.stop().set_bit());
 
-                r.unwrap()
+                loop {
+                    if let Ok(byte) = self.read_ack() {
+                        return Ok(byte)
+                    }
+                }
             }
-
-           ///
-            pub fn stop(&self)  -> Result<()> {
-                let i2c = self.0;
-                i2c.cr1.modify(|_, w| w.stop().set_bit());
-                while i2c.cr1.read().stop().bit_is_set() {}
-                Ok(())
-            }
-
 
             ///
-            pub fn write(&self, byte: u8) -> Result<()> {
+            pub fn stop(&self) -> Result<()> {
                 let i2c = self.0;
-
-                unsafe {
-                    ptr::write_volatile(&i2c.dr as *const _ as *mut u8, byte)
+                // Disable ACK
+                i2c.cr1.modify(|_,w|  w.ack().clear_bit());
+                if i2c.sr1.read().addr().bit_is_set() {
+                    // Reading right after the address byte
+                    let _sr2 = i2c.sr2.read();
                 }
-
-                // if i2c.sr1.read().rx_ne().bit_is_set() {
-                //     unsafe {
-                //         ptr::read_volatile(&i2c.dr as *const _ as *const u8);
-                //     }
-                // }
-                // while i2c.sr1.read().tx_e().bit_is_clear() {}
-                // while i2c.sr1.read().btf().bit_is_clear() {}
+                while i2c.sr1.read().tx_e().bit_is_clear()
+                    && i2c.sr1.read().btf().bit_is_clear() {}
+                // Send STOP condition
+                i2c.cr1.modify(|_, w| w.stop().set_bit());
                 Ok(())
-
-                // if sr.ovr().bit_is_set() {
-                //     panic!("p");
-                //     // Err(nb::Error::Other(Error::Overrun))
-                // } else if sr.timeout().bit_is_set() {
-                //     panic!("p");
-                //     // Err(nb::Error::Other(Error::Timeout))
-                // } else if sr.berr().bit_is_set() {
-                //     panic!("p");
-                //     // Err(nb::Error::Other(Error::BusError))
-                // } else if sr.tx_e().bit_is_set() {
-                //     Ok(unsafe {
-                //         ptr::write_volatile(&i2c.dr as *const _ as *mut u8, byte)
-                //     })
-                // } else {
-                //     panic!("p");
-                //     // Err(nb::Error::WouldBlock)
-                // }
             }
 
         }

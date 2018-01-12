@@ -77,3 +77,13 @@ macro_rules! println {
         }
     }
 }
+#[macro_export]
+macro_rules! printf {
+    ($($e:tt)*) => {
+        {
+            extern crate cortex_m_semihosting;
+            use core::fmt::Write;
+            write!(cortex_m_semihosting::hio::hstdout().unwrap(), $($e)*).unwrap();
+        }
+    }
+}
