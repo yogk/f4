@@ -126,15 +126,18 @@ macro_rules! impl_I2c {
                 if i2c.sr2.read().msl().bit_is_set() {
                     // Already in master mode, this is RESTART
 
+                    if i2c.sr1.read().tx_e().bit_is_clear() {
                     // Wait for tx to empty if not ACK failed.
-                    if i2c.sr1.read().tx_e().bit_is_clear() &&
-                    i2c.sr1.read().af().bit_is_clear() {
-                        return Err(nb::Error::WouldBlock);
+                        if i2c.sr1.read().af().bit_is_clear() {
+                            // No acknowledge failure
+                            return Err(nb::Error::WouldBlock);
+                        }
                     }
-                    // If we got NACK, use ACK pulling
+                    // If we got NACK and tx empty, use ACK pulling:
+                    i2c.sr1.modify(|_,w| w.af().clear_bit());
                 }
                 // Enable ACK
-                i2c.cr1.modify(|_,w|  w.ack().set_bit());
+                i2c.cr1.modify(|_,w| w.ack().set_bit());
                 // Send START condition
                 i2c.cr1.modify(|_, w| w.start().set_bit());
                 // Wait for repeated start generation
@@ -159,13 +162,13 @@ macro_rules! impl_I2c {
                     let _sr2 = i2c.sr2.read().bits();
                 }
                 let sr = i2c.sr1.read();
-                // if sr.ovr().bit_is_set() {
-                //     Err(nb::Error::Other(Error::Overrun))
-                // } else if sr.timeout().bit_is_set() {
-                //     Err(nb::Error::Other(Error::Timeout))
-                // } else if sr.berr().bit_is_set() {
-                //     Err(nb::Error::Other(Error::BusError))
-                // } else
+                if sr.ovr().bit_is_set() {
+                    Err(nb::Error::Other(Error::Overrun))
+                } else if sr.timeout().bit_is_set() {
+                    Err(nb::Error::Other(Error::Timeout))
+                } else if sr.berr().bit_is_set() {
+                    Err(nb::Error::Other(Error::BusError))
+                } else
                 if sr.tx_e().bit_is_set() || sr.btf().bit_is_set() {
                     Ok(unsafe {
                         ptr::write_volatile(&i2c.dr as *const _ as *mut u8, byte)
@@ -203,8 +206,7 @@ macro_rules! impl_I2c {
             pub fn read_nack(&self)  -> Result<u8> {
                 let i2c = self.0;
                 // In case a single byte has to be received, the Acknowledge disable
-                // is made before ADDR flag is cleared.
-                // Disable ACK
+                // is made before ADDR flag is cleared. Disable ACK
                 i2c.cr1.modify(|_,w|  w.ack().clear_bit());
 
                 if i2c.sr1.read().addr().bit_is_set() {
@@ -213,12 +215,7 @@ macro_rules! impl_I2c {
                 }
                 // Send STOP condition
                 i2c.cr1.modify(|_, w| w.stop().set_bit());
-
-                loop {
-                    if let Ok(byte) = self.read_ack() {
-                        return Ok(byte)
-                    }
-                }
+                self.read_ack() 
             }
 
             ///
@@ -242,5 +239,5 @@ macro_rules! impl_I2c {
 }
 
 impl_I2c!(I2C1);
-// impl_I2c!(I2C2);
-// impl_I2c!(I2C3);
+impl_I2c!(I2C2);
+impl_I2c!(I2C3);

@@ -108,28 +108,30 @@ fn idle(_t: &mut Threshold, r: idle::Resources) -> ! {
         0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, //
     ];
     // Write in 32 byte pages
-    for page in 0..4 {
+    for page in 0..2 {
         let mem_addr: u16 = page * EEPROM_PAGE_SIZE as u16;
         write_eeprom(&i2c, mem_addr, &tx).unwrap();
     }
 
-    // // Read back and print
-    // let mut mem_addr = 0x0000;
-    // // loop {
-    // for page in 0..4 {
-    //     match read_eeprom(&i2c, mem_addr, &mut rx) {
-    //         Err(_) => mem_addr = 0,
-    //         Ok(_) => {
-    //             // iprint!(&r.ITM.stim[0], "0x{:04X}: ", mem_addr);
-    //             for i in 0..rx.len() {
-    //                 iprint!(&r.ITM.stim[0], "0x{:02X} ", rx[i]);
-    //             }
-    //             iprint!(&r.ITM.stim[0], "\r\n");
-    //             // iprintln!(&r.ITM.stim[0], "");
-    //             // rtfm::bkpt();
-    //             mem_addr += RX_BUFFER_SIZE as u16;
-    //         }
-    //     }
-    // }
+    // Read back and print
+    let mut mem_addr = 0x0000;
+    loop {
+        for page in 0..4 {
+            match read_eeprom(&i2c, mem_addr, &mut rx) {
+                Err(_) => mem_addr = 0,
+                Ok(_) => {
+                    // iprint!(&r.ITM.stim[0], "0x{:04X}: ", mem_addr);
+                    // for i in 0..rx.len() {
+                    //     iprint!(&r.ITM.stim[0], "0x{:02X} ", rx[i]);
+                    // }
+                    // iprint!(&r.ITM.stim[0], "\r\n");
+                    // iprintln!(&r.ITM.stim[0], "");
+                    // rtfm::bkpt();
+                    mem_addr += RX_BUFFER_SIZE as u16;
+                }
+            }
+        }
+        rtfm::bkpt();
+    }
     loop {}
 }
