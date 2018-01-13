@@ -47,10 +47,7 @@ macro_rules! impl_I2c {
         {
 
             /// Initializes the SPI
-            pub fn init(&self,
-                    _gpioa: &GPIOA,
-                    gpiob: &GPIOB,
-                    rcc: &RCC) {
+            pub fn init(&self, _gpioa: &GPIOA, gpiob: &GPIOB, rcc: &RCC) {
                 let i2c = self.0;
                 if i2c.get_type_id() == TypeId::of::<I2C1>() {
                     // enable I2C1, GPIOB
@@ -82,8 +79,10 @@ macro_rules! impl_I2c {
                         w.pupdr8().bits(0)
                         .pupdr9().bits(0)});
 
-                } else  if i2c.get_type_id() == TypeId::of::<I2C2>() {
+                } else if i2c.get_type_id() == TypeId::of::<I2C2>() {
+                    unimplemented!(); // TODO: Setup pins, the rest should work
                 } else if i2c.get_type_id() == TypeId::of::<I2C3>() {
+                    unimplemented!(); // TODO: Setup pins, the rest should work
                 }
 
                 self.disable();
@@ -97,14 +96,15 @@ macro_rules! impl_I2c {
 
                 i2c.cr2.modify(|_,w| unsafe { w.freq().bits(pclk1_mhz as u8) });
 
-                let mut result: u16 = (pclk1_hz / (100_000>>1)) as u16; // <<1 for 400_000
+                // Use 100_000 Hz baud rate
+                let mut result: u16 = (pclk1_hz / (100_000/2)) as u16;
                 if result == 0 {
                     result = 1;
                 }
-
+                // RM0368 18.6.8 
                 i2c.ccr.modify(|_,w| unsafe {
                     w.f_s().clear_bit() // Standard mode I2C
-                    .duty().clear_bit() // Fast mode t_low/t_high = 2
+                    .duty().clear_bit() // Fast mode duty cycle: t_low/t_high = 2
                     .ccr().bits(result)
                 });
                 i2c.trise.modify(|_,w| unsafe { w.trise().bits((pclk1_mhz+1) as u8)});
@@ -120,7 +120,7 @@ macro_rules! impl_I2c {
                 self.0.cr1.modify(|_, w| w.pe().set_bit())
             }
 
-            ///
+            /// Send a (RE)START condition. TODO: Non-blocking
             pub fn start(&self, address: u8)  -> Result<()> {
                 let i2c = self.0;
                 if i2c.sr2.read().msl().bit_is_set() {
@@ -154,7 +154,7 @@ macro_rules! impl_I2c {
                 Ok(())
             }
 
-            ///
+            /// Write a byte
             pub fn write(&self, byte: u8) -> Result<()> {
                 let i2c = self.0;
                 if i2c.sr1.read().addr().bit_is_set() {
@@ -178,7 +178,7 @@ macro_rules! impl_I2c {
                 }
             }
 
-            ///
+            /// Read a byte and respond with ACK
             pub fn read_ack(&self) -> Result<u8> {
                 let i2c = self.0;
                 if i2c.sr1.read().addr().bit_is_set() {
@@ -202,11 +202,11 @@ macro_rules! impl_I2c {
                 }
             }
 
-            ///
+            /// Read a byte and respond with NACK
             pub fn read_nack(&self)  -> Result<u8> {
                 let i2c = self.0;
                 // In case a single byte has to be received, the Acknowledge disable
-                // is made before ADDR flag is cleared. Disable ACK
+                // is made before ADDR flag is cleared. Disable ACK.
                 i2c.cr1.modify(|_,w|  w.ack().clear_bit());
 
                 if i2c.sr1.read().addr().bit_is_set() {
@@ -215,10 +215,10 @@ macro_rules! impl_I2c {
                 }
                 // Send STOP condition
                 i2c.cr1.modify(|_, w| w.stop().set_bit());
-                self.read_ack() 
+                self.read_ack()
             }
 
-            ///
+            /// Send STOP condition
             pub fn stop(&self) -> Result<()> {
                 let i2c = self.0;
                 // Disable ACK
@@ -227,8 +227,9 @@ macro_rules! impl_I2c {
                     // Reading right after the address byte
                     let _sr2 = i2c.sr2.read();
                 }
-                while i2c.sr1.read().tx_e().bit_is_clear()
-                    && i2c.sr1.read().btf().bit_is_clear() {}
+                if i2c.sr1.read().tx_e().bit_is_clear() && i2c.sr1.read().btf().bit_is_clear() {
+                    return Err(nb::Error::WouldBlock);
+                }
                 // Send STOP condition
                 i2c.cr1.modify(|_, w| w.stop().set_bit());
                 Ok(())
@@ -239,5 +240,5 @@ macro_rules! impl_I2c {
 }
 
 impl_I2c!(I2C1);
-impl_I2c!(I2C2);
-impl_I2c!(I2C3);
+// impl_I2c!(I2C2);
+// impl_I2c!(I2C3);
