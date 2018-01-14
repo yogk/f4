@@ -1,6 +1,6 @@
-//! I2C
+//! Inter-Integrated Circuit (I2C)
 //!
-//! You can use the I2c interface with these instances
+//! You can use the I2C interface with these instances
 //!
 //! # I2C1
 //! - SCL = PB8
@@ -40,24 +40,22 @@ pub struct I2c<'a, T>(pub &'a T)
 where
     T: 'a;
 
-/// I2c interface
+/// I2C interface
 macro_rules! impl_I2c {
     ($S:ident) => {
-        impl<'a> I2c<'a, $S>
-        {
-
+        impl<'a> I2c<'a, $S> {
             /// Initializes the SPI
-            pub fn init(&self, _gpioa: &GPIOA, gpiob: &GPIOB, rcc: &RCC) {
+            pub fn init(&self, gpioa: &GPIOA, gpiob: &GPIOB, rcc: &RCC) {
                 let i2c = self.0;
                 if i2c.get_type_id() == TypeId::of::<I2C1>() {
-                    // enable I2C1, GPIOB
-                    rcc.apb1enr.modify(|_, w| {
-                        w.i2c1en().set_bit()
-                    });
-                    rcc.ahb1enr.modify(|_, w| {
-                        w.gpioben().set_bit()
-                    });
-                    // DM00102166 - Alternate function AF4, Table 9
+                    // # I2C1
+                    // - SCL = PB8
+                    // - SDA = PB9
+
+                    // Enable I2C1, GPIOB
+                    rcc.apb1enr.modify(|_, w| w.i2c1en().set_bit());
+                    rcc.ahb1enr.modify(|_, w| w.gpioben().set_bit());
+                    // DM00102166 - Alternate function, Table 9
                     gpiob.afrh.modify(|_, w| unsafe {
                         w.afrh8().bits(4)
                         .afrh9().bits(4)});
@@ -70,19 +68,68 @@ macro_rules! impl_I2c {
                     gpiob.moder.modify(|_, w| unsafe {
                         w.moder8().bits(2)
                         .moder9().bits(2)});
-                    // Push pull
+                    // Alternate function open drain
                     gpiob.otyper.modify(|_, w|
                         w.ot8().set_bit()
                         .ot9().set_bit());
-                    // Pull ups
+                    // Floating
                     gpiob.pupdr.modify(|_, w| unsafe {
                         w.pupdr8().bits(0)
                         .pupdr9().bits(0)});
 
                 } else if i2c.get_type_id() == TypeId::of::<I2C2>() {
-                    unimplemented!(); // TODO: Setup pins, the rest should work
+                    // # I2C2
+                    // - SCL = PB10
+                    // - SDA = PB3
+
+                    // Enable I2C2, GPIOB
+                    rcc.apb1enr.modify(|_, w| w.i2c2en().set_bit());
+                    rcc.ahb1enr.modify(|_, w| w.gpioben().set_bit());
+                    // DM00102166 - Alternate function, Table 9
+                    gpiob.afrl.modify(|_, w| unsafe {w.afrl3().bits(9)});
+                    gpiob.afrh.modify(|_, w| unsafe {w.afrh10().bits(4)});
+                    // RM0368 8.3 Table 23
+                    // Highest output speed
+                    gpiob.ospeedr.modify(|_, w| unsafe {
+                        w.ospeedr3().bits(0b11)
+                        .ospeedr10().bits(0b11)});
+                    // Alternate function mode
+                    gpiob.moder.modify(|_, w| unsafe {
+                        w.moder3().bits(2)
+                        .moder10().bits(2)});
+                    // Alternate function open drain
+                    gpiob.otyper.modify(|_, w|
+                        w.ot3().set_bit()
+                        .ot10().set_bit());
+                    // Floating
+                    gpiob.pupdr.modify(|_, w| unsafe {
+                        w.pupdr3().bits(0)
+                        .pupdr10().bits(0)});
+
                 } else if i2c.get_type_id() == TypeId::of::<I2C3>() {
-                    unimplemented!(); // TODO: Setup pins, the rest should work
+                    // # I2C3
+                    // - SCL = PA8
+                    // - SDA = PB4
+
+                    // Enable I2C1, GPIOA, GPIOB
+                    rcc.apb1enr.modify(|_, w| w.i2c3en().set_bit());
+                    rcc.ahb1enr.modify(|_, w| w.gpioaen().set_bit().gpioben().set_bit());
+                    // DM00102166 - Alternate function, Table 9
+                    gpioa.afrh.modify(|_, w| w.afrh8().bits(4));
+                    gpiob.afrl.modify(|_, w| unsafe {w.afrl4().bits(9)});
+                    // RM0368 8.3 Table 23
+                    // Highest output speed
+                    gpioa.ospeedr.modify(|_, w| w.ospeedr8().bits(0b11));
+                    gpiob.ospeedr.modify(|_, w| unsafe {w.ospeedr4().bits(0b11)});
+                    // Alternate function mode
+                    gpioa.moder.modify(|_, w| w.moder8().bits(2));
+                    gpiob.moder.modify(|_, w| unsafe {w.moder4().bits(2)});
+                    // Alternate function open drain
+                    gpioa.otyper.modify(|_, w| w.ot8().set_bit());
+                    gpiob.otyper.modify(|_, w| w.ot4().set_bit());
+                    // Floating
+                    gpioa.pupdr.modify(|_, w| unsafe {w.pupdr8().bits(0)});
+                    gpiob.pupdr.modify(|_, w| unsafe {w.pupdr4().bits(0)});
                 }
 
                 self.disable();
@@ -101,7 +148,7 @@ macro_rules! impl_I2c {
                 if result == 0 {
                     result = 1;
                 }
-                // RM0368 18.6.8 
+                // RM0368 18.6.8
                 i2c.ccr.modify(|_,w| unsafe {
                     w.f_s().clear_bit() // Standard mode I2C
                     .duty().clear_bit() // Fast mode duty cycle: t_low/t_high = 2
@@ -240,5 +287,5 @@ macro_rules! impl_I2c {
 }
 
 impl_I2c!(I2C1);
-// impl_I2c!(I2C2);
-// impl_I2c!(I2C3);
+impl_I2c!(I2C2);
+impl_I2c!(I2C3);
