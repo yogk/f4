@@ -25,32 +25,6 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
 
-## d7018e - special studies in embedded systems
-
-##### Name : Johannes Sjölund
-##### Mail : johsjl-1@student.ltu.se
-##### Personal number: 8506298978
-##### Nucleo 64 support crate
-
-### Grading
-
-3. Implement drivers for the Nucleo 64, stm32f401re/stm32f411re, similar to the f3/bluepill support crates. Most or all of the peripherals should be supported in some basic configuration
-* GPIO
-* UART over USB using the ST-Link v2
-* DMA
-* Timers with configurations
-  * Microsecond counter
-  * PWM generation
-  * Encoder mode
-* SPI
-* I²C
-
-The peripheral pin configuration should match the standard Arduino headers.
-
-4. The stm32f4 supports higher clock frequency than the default 16 MHz. Implement a simple way of setting it to the maximum of 84 MHz for the stm32f401re and 100 MHz for the stm32f411re, or any valid lower value (configured using the PLL).
-
-5. Create a demo using the RTFM core and some external peripheral such as an IMU or Bluetooth device. The demo should show how to use the RTFM core for safe concurrency and demonstrate different peripherals such as GPIO, USART, DMA, SPI etc.
-
 ### References
 ![Nucleo F411RE pins](docs/Nucleo_f411re.png)
 
