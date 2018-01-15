@@ -12,7 +12,7 @@ extern crate f4;
 extern crate nb;
 
 use f4::clock;
-use f4::time::{Milliseconds};
+use f4::time::Milliseconds;
 use f4::{Capture, Channel};
 use f4::prelude::*;
 use rtfm::{app, Threshold};

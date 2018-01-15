@@ -14,7 +14,7 @@ use f4::led::{self, LED};
 use f4::clock;
 use f4::dwt;
 use f4::time::Milliseconds;
-use f4::frequency::ahb1::{Ticks};
+use f4::frequency::ahb1::Ticks;
 use rtfm::{app, Threshold};
 
 // CONFIGURATION
@@ -45,13 +45,13 @@ fn init(p: init::Peripherals, _r: init::Resources) {
 
     // Initialize the user LED
     led::init(p.GPIOA, p.RCC);
-    
+
     // Start the systick timer
     p.SYST.set_clock_source(SystClkSource::Core);
     p.SYST.set_reload(hclk / FREQUENCY);
     p.SYST.enable_interrupt();
     p.SYST.enable_counter();
-    
+
     // We must enable the cyccnt for try_until to work
     p.DWT.enable_cycle_counter();
 }

@@ -212,7 +212,7 @@ where
         // Check if peripheral does not use default clock
         let ahb1_clk: u32 = ::ahb1::Ticks::from(::time::Seconds(1)).into();
         let apb1_clk: u32 = ::apb1::Ticks::from(::time::Seconds(1)).into();
-        let apb1psc: u32 =  ahb1_clk / apb1_clk;
+        let apb1psc: u32 = ahb1_clk / apb1_clk;
         let brr = baud_rate.into() / apb1psc;
         assert!(brr >= 16, "impossible baud rate");
         usart.brr.write(|w| unsafe { w.bits(brr) });

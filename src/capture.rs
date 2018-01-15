@@ -249,7 +249,7 @@ macro_rules! impl_Capture {
                 tim.ccmr2_output.write(|w| unsafe {
                     w.bits((0b1111 << 12) | (0b01 << 8) | (0b1111 << 4) | (0b01 << 0))
                 });
-                
+
                 // enable capture on rising edge
                 // capture pins disabled by default
                 match channel {
@@ -274,7 +274,7 @@ macro_rules! impl_Capture {
 
                 tim.arr.write(|w| unsafe{ w.bits(u32::MAX) });
 
-                // RM0368 13.4.1 
+                // RM0368 13.4.1
                 // udis: Update event disabled, shadow registers keep their value (ARR, PSC, CCRx)
                 // dir: Upcounter
                 // opm: One-pulse mode disabled
