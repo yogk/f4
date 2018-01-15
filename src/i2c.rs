@@ -144,7 +144,7 @@ macro_rules! impl_I2c {
                 i2c.cr2.modify(|_,w| unsafe { w.freq().bits(pclk1_mhz as u8) });
 
                 // Use 100_000 Hz baud rate
-                let mut result: u16 = (pclk1_hz / (100_000/2)) as u16;
+                let mut result: u16 = (pclk1_hz / (50_000/2)) as u16;
                 if result == 0 {
                     result = 1;
                 }

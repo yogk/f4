@@ -1,4 +1,4 @@
-//! Reading and page writing to an external EEPROM Microchip 24LC64 using I2C3
+//! Reading and page writing to an external EEPROM Microchip 24LC64 using I2C1
 
 // #![deny(warnings)]
 #![feature(proc_macro)]
@@ -16,7 +16,7 @@ use f4::I2c;
 use f4::led::{self, LED};
 use rtfm::{app, Threshold};
 use core::result::Result;
-use stm32f40x::I2C3;
+use stm32f40x::I2C1;
 use f4::clock;
 
 const EEPROM_PAGE_SIZE: usize = 32;
@@ -33,7 +33,7 @@ app! {
     device: f4::stm32f40x,
 
     idle: {
-        resources: [I2C3, ITM],
+        resources: [I2C1, ITM],
     },
 }
 
@@ -43,14 +43,14 @@ fn init(p: init::Peripherals) {
     led::init(p.GPIOA, p.RCC);
 
     // Init the I2C peripheral
-    let i2c = I2c(p.I2C3);
+    let i2c = I2c(p.I2C1);
     i2c.init(p.GPIOA, p.GPIOB, p.RCC);
     i2c.enable();
 }
 
 // 24LC64 sequential read. See datasheet DS21189F.
 fn read_eeprom(
-    i2c: &I2c<I2C3>,
+    i2c: &I2c<I2C1>,
     mem_addr: u16,
     rx_buffer: &mut [u8; RX_BUFFER_SIZE],
 ) -> Result<(), Error> {
@@ -82,9 +82,10 @@ fn read_eeprom(
     }
     Ok(())
 }
+
 // 24LC64 page write. See datasheet DS21189F.
 fn write_eeprom(
-    i2c: &I2c<I2C3>,
+    i2c: &I2c<I2C1>,
     mem_addr: u16,
     tx_buffer: &[u8; EEPROM_PAGE_SIZE],
 ) -> Result<(), Error> {
@@ -107,7 +108,7 @@ fn write_eeprom(
 
 // Test writing and reading the eeprom
 fn idle(_t: &mut Threshold, r: idle::Resources) -> ! {
-    let i2c = I2c(r.I2C3);
+    let i2c = I2c(r.I2C1);
 
     // Write in 32 byte pages (max for this eeprom)
     let mut mem_addr = 0x0000;
