@@ -49,6 +49,7 @@ pub mod frequency;
 pub mod madgwick_ahrs;
 pub mod dwt;
 pub mod adc;
+pub mod i2c;
 
 use frequency::*;
 
@@ -63,6 +64,7 @@ pub use spi::Spi;
 pub use adc::{Adc, AdcChannel};
 pub use lsm9ds1::{ImuSettings, Lsm9ds1};
 pub use madgwick_ahrs::MadgwickAhrs;
+pub use i2c::{I2c};
 
 /// println over semihosting
 #[macro_export]
@@ -72,6 +74,16 @@ macro_rules! println {
             extern crate cortex_m_semihosting;
             use core::fmt::Write;
             writeln!(cortex_m_semihosting::hio::hstdout().unwrap(), $($e)*).unwrap();
+        }
+    }
+}
+#[macro_export]
+macro_rules! printf {
+    ($($e:tt)*) => {
+        {
+            extern crate cortex_m_semihosting;
+            use core::fmt::Write;
+            write!(cortex_m_semihosting::hio::hstdout().unwrap(), $($e)*).unwrap();
         }
     }
 }
