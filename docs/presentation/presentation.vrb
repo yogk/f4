@@ -1,0 +1,11 @@
+\frametitle{cortex-m-rtfm}\framesubtitle {Rust crate for RTFM on Arm Cortex-M}
+Rust crate (code library) which combines the best of Rust and RTFM, written by \\Jorge Aparicio and Per Lindgren.
+
+\vspace{2mm}
+
+Designed around a concept of \structure{tasks} and \structure{resources}, where tasks
+\begin{itemize}
+  \item are \alert{event triggered},
+  \item are assigned \alert{constant priorities},
+  \item must not contain endless loops. \footnote{\url{https://docs.rs/cortex-m-rtfm/0.3.1/cortex_m_rtfm/}}
+\end{itemize}
