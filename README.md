@@ -34,7 +34,7 @@ dual licensed as above, without any additional terms or conditions.
 
 [STM32F411 Datasheet](https://www.st.com/resource/en/datasheet/stm32f411re.pdf)
 
-[STM32F411 Datasheet](https://www.st.com/resource/en/datasheet/stm32f401re.pdf)
+[STM32F401 Datasheet](https://www.st.com/resource/en/datasheet/stm32f401re.pdf)
 
 [STM32F411 Reference Manual (RM0383)](https://www.st.com/resource/en/reference_manual/dm00119316.pdf)
 
