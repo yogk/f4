@@ -1,4 +1,24 @@
-//! Analog to Digital Converter
+//! Analog to Digital Converter (ADC)
+//!
+//! You can use the ADC interface with these instances
+//!
+//! # ADC1
+//! - IN0  = PA0
+//! - IN1  = PA1
+//! - IN2  = PA2 (Unimplemented: conflicts with USB USART2_TX)
+//! - IN3  = PA3 (Unimplemented: conflicts with USB USART2_RX)
+//! - IN4  = PA4
+//! - IN5  = PA5
+//! - IN6  = PA6
+//! - IN7  = PA7
+//! - IN8  = PB0
+//! - IN9  = PB1
+//! - IN10 = PC0
+//! - IN11 = PC1
+//! - IN12 = PC2
+//! - IN13 = PC3
+//! - IN14 = PC4
+//! - IN15 = PC5
 
 use core::marker::Unsize;
 
@@ -18,9 +38,9 @@ pub enum AdcChannel {
     /// ADC1_IN1 = PA1
     _1 = 1,
     /// ADC1_IN2 = PA2 (Unimplemented: conflicts with USB USART2_TX)
-    // _2 = 2,
+    /// _2 = 2,
     /// ADC1_IN3 = PA3 (Unimplemented: conflicts with USB USART2_RX)
-    // _3 = 3,
+    /// _3 = 3,
     /// ADC1_IN4 = PA4
     _4 = 4,
     /// ADC1_IN5 = PA5

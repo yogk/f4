@@ -305,7 +305,7 @@ fn sample_imu(t: &mut Threshold, mut r: TIM2::Resources) {
     r.MAG.set(mag.sub(**r.MAG_BIAS).mul(**r.MAG_SCL));
 
     // Update the Madgwick orientation filter
-    r.ORIENTATION.set(r.FILTER.madgwick_ahrs_update(
+    r.ORIENTATION.set(r.FILTER.update(
         Vector3 {
             x: r.ACC.x,
             y: r.ACC.y,

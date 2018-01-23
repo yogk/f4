@@ -1,19 +1,13 @@
-//! Board Support Crate for the STM32F3DISCOVERY
+//! Board Support Crate for STMicroelectronics NUCLEO-F411RE and NUCLEO-F401RE
 //!
 //! # Usage
 //!
 //! Follow `cortex-m-quickstart` [instructions][i] but remove the `memory.x`
 //! linker script and the `build.rs` build script file as part of the
-//! configuration of the quickstart crate. Additionally, uncomment the "if using
-//! ITM" block in the `.gdbinit` file.
+//! configuration of the quickstart crate.
 //!
-//! [i]: https://docs.rs/cortex-m-quickstart/0.2.0/cortex_m_quickstart/
+//! [i]: https://docs.rs/cortex-m-quickstart/0.2.3/cortex_m_quickstart/
 //!
-//! # Examples
-//!
-//! Check the [examples] module.
-//!
-//! [examples]: ./examples/index.html
 
 #![deny(missing_docs)]
 #![deny(warnings)]
@@ -53,18 +47,17 @@ pub mod i2c;
 
 use frequency::*;
 
-pub use math_utils::{Quaternion, Vector3};
-pub use hal::prelude;
-pub use serial::Serial;
-pub use serial::U8Writer;
-pub use timer::{Channel, Timer};
-pub use pwm::Pwm;
-pub use capture::Capture;
-pub use spi::Spi;
 pub use adc::{Adc, AdcChannel};
+pub use capture::Capture;
+pub use hal::prelude;
+pub use i2c::I2c;
 pub use lsm9ds1::{ImuSettings, Lsm9ds1};
 pub use madgwick_ahrs::MadgwickAhrs;
-pub use i2c::I2c;
+pub use math_utils::{Quaternion, Vector3};
+pub use pwm::Pwm;
+pub use serial::{Serial, U8Writer};
+pub use spi::Spi;
+pub use timer::{Channel, Timer};
 
 /// println over semihosting
 #[macro_export]
@@ -77,6 +70,7 @@ macro_rules! println {
         }
     }
 }
+/// printf over semihosting
 #[macro_export]
 macro_rules! printf {
     ($($e:tt)*) => {

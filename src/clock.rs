@@ -37,7 +37,7 @@ fn calculate_pll(m: u8, n: u16, p: u8) -> (u32, u32) {
     (pll_bitmask, pll_output)
 }
 
-/// Set system clock
+/// Set system clock using the PLL. Returns the resulting frequency in Hz.
 pub fn set(rcc: &RCC, flash: &FLASH, m: u8, n: u16, p: u8) -> u32 {
     let (pll_bitmask, sysclk) = calculate_pll(m, n, p);
     // let ahb prescaler = 1, then
@@ -62,7 +62,6 @@ pub fn set(rcc: &RCC, flash: &FLASH, m: u8, n: u16, p: u8) -> u32 {
             _ => panic!("Invalid HCLK frequency"),
         })
     });
-    // println!("Flash latency! {:x}", p.FLASH.acr.read().latency().bits());
 
     rcc.cfgr
         .modify(|_, w| w.sw0().clear_bit().sw1().clear_bit()); //Switch to HSI

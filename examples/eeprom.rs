@@ -7,7 +7,6 @@
 extern crate cortex_m;
 extern crate cortex_m_debug;
 extern crate cortex_m_rtfm as rtfm;
-#[macro_use]
 extern crate f4;
 extern crate stm32f40x;
 

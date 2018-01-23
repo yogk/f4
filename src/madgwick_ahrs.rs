@@ -1,10 +1,13 @@
 //! Rust implementation of Madgwick's IMU and AHRS algorithms.
-//! See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
+//! 
+//! See: http://x-io.co.uk/open-source-imu-and-ahrs-algorithms/
 
 use math_utils::{Quaternion, Vector3};
 use m::Float as _0;
 
 /// Madgwick's IMU and AHRS
+/// 
+/// See: http://x-io.co.uk/open-source-imu-and-ahrs-algorithms/
 pub struct MadgwickAhrs {
     /// Quaternion of sensor frame relative to auxiliary frame
     q: Quaternion<f32>,
@@ -24,7 +27,7 @@ impl MadgwickAhrs {
     }
 
     /// The filter should be updated at the frequency specified in begin()
-    fn madgwick_ahrs_update_imu(&mut self, a: Vector3<f32>, g: Vector3<f32>) -> Quaternion<f32> {
+    fn update_imu(&mut self, a: Vector3<f32>, g: Vector3<f32>) -> Quaternion<f32> {
         let q = self.q;
 
         // Rate of change of quaternion from gyroscope
@@ -74,12 +77,16 @@ impl MadgwickAhrs {
     }
 
     /// The filter should be updated at the frequency specified in begin()
-    pub fn madgwick_ahrs_update(
+    pub fn update(
         &mut self,
-        a: Vector3<f32>,
-        g: Vector3<f32>,
-        m: Option<Vector3<f32>>,
+        accelerometer: Vector3<f32>,
+        gyroscope: Vector3<f32>,
+        magnetometer: Option<Vector3<f32>>,
     ) -> Quaternion<f32> {
+        let a = accelerometer;
+        let g = gyroscope;
+        let m = magnetometer;
+
         if let Some(m) = m {
             let q = self.q;
 
@@ -167,7 +174,7 @@ impl MadgwickAhrs {
             self.q.clone()
         } else {
             // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
-            return self.madgwick_ahrs_update_imu(a, g);
+            return self.update_imu(a, g);
         }
     }
 }
