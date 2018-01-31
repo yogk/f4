@@ -38,7 +38,7 @@ use hal;
 use static_ref::Static;
 use stm32f40x::{DMA1, TIM1, TIM2, TIM3, TIM4, GPIOA, GPIOB, GPIOC, RCC};
 
-use dma::{self, Buffer, Dma1Stream2};
+use dma::{self, Buffer, Dma1Stream5};
 use timer::Channel;
 
 /// PWM driver
@@ -241,11 +241,17 @@ macro_rules! impl_Pwm {
 
                 if let Some(dma1) = dma1 {
                     //  Update DMA request enable
-                    tim.dier.modify(|_, w| w.ude().set_bit());
+                    tim.dier.modify(|_, w| 
+                        w.ude().clear_bit()
+                        .cc1de().set_bit()
+                        .cc2de().set_bit()
+                        .cc3de().set_bit()
+                        .cc4de().set_bit()
+                    );
 
-                    if tim.get_type_id() == TypeId::of::<TIM3>() {
-                        // TIM3_CH4/UP
-                        // chsel: Channel 5 (RM0368 9.3.3 Table 27)
+                    if tim.get_type_id() == TypeId::of::<TIM2>() {
+                        // TIM2_CH1
+                        // chsel: Channel 3 (RM0368 9.3.3 Table 27)
                         // pl: Medium priority
                         // msize: Memory size = 8 bits
                         // psize: Peripheral size = 16 bits
@@ -255,9 +261,9 @@ macro_rules! impl_Pwm {
                         // dir: Transfer from memory to peripheral
                         // tcie: Transfer complete interrupt enabled
                         // en: Disabled
-                        dma1.s2cr.write(|w| unsafe {
+                        dma1.s5cr.write(|w| unsafe {
                             w.chsel()
-                                .bits(5)
+                                .bits(3)
                                 .pl()
                                 .bits(0b01)
                                 .msize()
@@ -266,9 +272,9 @@ macro_rules! impl_Pwm {
                                 .bits(0b01)
                                 .minc()
                                 .set_bit()
-                                .circ()
-                                .set_bit()
                                 .pinc()
+                                .clear_bit()
+                                .circ()
                                 .clear_bit()
                                 .dir()
                                 .bits(1)
@@ -281,14 +287,13 @@ macro_rules! impl_Pwm {
                         unimplemented!()
                     }
                 }
-
                 tim.cr1.write(|w| unsafe {
                     w.cms()
                         .bits(0b00)
                         .dir()
-                        .bit(false)
+                        .clear_bit()
                         .opm()
-                        .bit(false)
+                        .clear_bit()
                         .cen()
                         .set_bit()
                 });
@@ -309,31 +314,31 @@ macro_rules! impl_Pwm {
                 &self,
                 dma1: &DMA1,
                 channel: Channel,
-                buffer: &Static<Buffer<B, Dma1Stream2>>,
+                buffer: &Static<Buffer<B, Dma1Stream5>>,
             ) -> ::core::result::Result<(), dma::Error>
             where
                 B: Unsize<[u8]>,
             {
-                let tim3 = self.0;
+                let tim = self.0;
 
-                if tim3.get_type_id() == TypeId::of::<TIM3>() {
-                    if dma1.s2cr.read().en().bit_is_set() {
+                if tim.get_type_id() == TypeId::of::<TIM2>() {
+                    if dma1.s5cr.read().en().bit_is_set() {
                         return Err(dma::Error::InUse);
                     }
 
                     let buffer: &[u8] = buffer.lock();
 
-                    dma1.s2ndtr.write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
-                    dma1.s2par.write(|w| unsafe {
+                    dma1.s5ndtr.write(|w| unsafe { w.ndt().bits(u16(buffer.len()).unwrap()) });
+                    dma1.s5par.write(|w| unsafe {
                         match channel {
-                            Channel::_1 => w.bits(&tim3.ccr1 as *const _ as u32),
-                            Channel::_2 => w.bits(&tim3.ccr2 as *const _ as u32),
-                            Channel::_3 => w.bits(&tim3.ccr3 as *const _ as u32),
-                            Channel::_4 => w.bits(&tim3.ccr4 as *const _ as u32),
+                            Channel::_1 => w.bits(&tim.ccr1 as *const _ as u32),
+                            Channel::_2 => w.bits(&tim.ccr2 as *const _ as u32),
+                            Channel::_3 => w.bits(&tim.ccr3 as *const _ as u32),
+                            Channel::_4 => w.bits(&tim.ccr4 as *const _ as u32),
                         }
                     });
-                    dma1.s2m0ar.write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
-                    dma1.s2cr.modify(|_, w| w.en().set_bit());
+                    dma1.s5m0ar.write(|w| unsafe { w.bits(buffer.as_ptr() as u32) });
+                    dma1.s5cr.modify(|_, w| w.en().set_bit());
 
                     Ok(())
 
@@ -344,6 +349,7 @@ macro_rules! impl_Pwm {
         }
     }
 }
+
 macro_rules! impl_halPwm {
     ($TIM:ident, $APB:ident) => {
         impl<'a> hal::Pwm for Pwm<'a, $TIM>

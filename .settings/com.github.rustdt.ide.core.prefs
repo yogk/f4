@@ -1,0 +1,9 @@
+build_targets=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<build_targets xmlns\="com.github.rustdt.ide.core">\n<target auto_enabled\="false" config\="build" n_enabled\="false" version2\="true">\n<command_invocation append_env\="true" command_arguments\="xargo build --examples --message-format\=json">\n<env_vars/>\n</command_invocation>\n</target>\n<target auto_enabled\="false" config\="check" n_enabled\="false" version2\="true">\n<command_invocation append_env\="true" command_arguments\="xargo check --examples --message-format\=json&\#10;">\n<env_vars/>\n</command_invocation>\n</target>\n<target auto_enabled\="false" config\="clean" n_enabled\="false" version2\="true"/>\n</build_targets>\n
+eclipse.preferences.version=1
+format_onSave=true
+racer_path=/home/pln/.cargo/bin/racer
+rainicorn_path=/home/pln/.cargo/RustDT/bin/parse_describe
+rustfmt_path=/home/pln/.cargo/bin/rustfmt
+sdk_path=/home/pln/.cargo/
+sdk_src_path=/home/pln/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/
+toolchain_prefs.use_project_settings=false

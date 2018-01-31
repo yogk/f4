@@ -1,0 +1,20 @@
+{
+    "configurations": [
+
+        {
+            "autorun": [
+                "monitor arm semihosting enable",
+                "load"
+            ],
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "arm-none-eabi-gdb",
+            "executable": "./target/thumbv7em-none-eabihf/debug/examples/ws2812", // Heads up: target name
+            "name": "Debug",
+            "remote": true,
+            "request": "attach",
+            "target": ":3333",
+            "type": "gdb"
+        }
+    ],
+    "version": "0.2.0"
+}

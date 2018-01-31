@@ -209,7 +209,6 @@ impl<'a> Adc<'a> {
         rcc.apb2enr.modify(|_, w| w.adc1en().set_bit());
 
         // RM0368 11.12.5
-        // Sample time: 55.5 + 12.5 = 68 cycles
         adc1.smpr2.modify(|_, w| unsafe { w.smpx_x().bits(0) });
 
         // ADC1
