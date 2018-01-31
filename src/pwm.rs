@@ -440,6 +440,7 @@ impl<'a> hal::Pwm for Pwm<'a, TIM1> {
     }
 
     fn enable(&self, channel: Channel) {
+        self.0.bdtr.modify(|_, w|  w.moe().set_bit());
         match channel {
             Channel::_1 => self.0.ccer.modify(|_, w| w.cc1e().set_bit()),
             Channel::_2 => self.0.ccer.modify(|_, w| w.cc2e().set_bit()),
